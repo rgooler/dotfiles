@@ -13,6 +13,7 @@
     ~/.fonts: fonts
     ~/.bashrc: bashrc
     ~/.zshrc: zshrc
+    ~/.oh-my-zsh/themes/zsh2000.zsh-theme: oh-my-zsh/themes/zsh2000.zsh-theme
 
 - shell:
   - [git submodule update --init --recursive, Installing submodules]
