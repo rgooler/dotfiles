@@ -1,3 +1,23 @@
-- clean: []
-- link: {}
-- shell: []
+- defaults:
+    link:
+      relink: true
+      create: true
+
+- clean: ['~']
+
+- link:
+    ~/bin: bin
+    ~/.inputrc: inputrc
+    ~/.pystartup: pystartup
+    ~/.icons: icons
+    ~/.fonts: fonts
+    ~/.bashrc: bashrc
+    ~/.zshrc: zshrc
+
+- shell:
+  - [git submodule update --init --recursive, Installing submodules]
+  - [touch ~/.bashrc_local, Creating local file for bashrc]
+  - [sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)", Installing oh-my-zsh]
+
+- create:
+    - ~/src

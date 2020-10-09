@@ -1,0 +1,6 @@
+from pprint import pprint
+
+try:
+    import requests
+except ImportError:
+    pass

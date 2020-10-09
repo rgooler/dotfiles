@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+import argparse
+from github import Github
+import os
+import subprocess
+
+class GH(object):
+    def __init__(self, org, token, basepath):
+        self.basepath = basepath
+        self.g = Github(token)
+        self.org = org
+        try:
+            print '/'.join([basepath, org])
+            os.makedirs('/'.join([basepath, org]))
+        except:
+            pass
+
+    def process_org(self):
+        repos = self.g.get_organization(self.org).get_repos()
+        for repo in repos:
+            path = '/'.join([self.basepath, org, repo.name])
+            print path
+            if (os.path.exists(path)):
+                print "update_repo"
+                self.update_repo(repo)
+            else:
+                print "clone_repo"
+                self.clone_repo(repo)
+
+    def update_repo(self, repo):
+        path = '/'.join([self.basepath, org, repo.name])
+        os.chdir(path)
+        subprocess.call(['git', 'fetch'])
+
+    def clone_repo(self, repo):
+        path = '/'.join([self.basepath, org, repo.name])
+        git_url = 'git@github.com:%s/%s' % (org, repo.name)
+        os.chdir('/'.join([self.basepath, org]))
+        subprocess.call(['git', 'clone', git_url])
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Download and update all github repos from org(s)')
+    parser.add_argument('--token', '-t',
+                        required=True,
+                        help='Github Authentication Token')
+    parser.add_argument('--org', '-o',
+                        dest='orgs', action='append', type=str, required=True,
+                        help='organization(s) to copy')
+    parser.add_argument('--basepath', '-b',
+                        default=os.path.expanduser("~")+'/src',
+                        help='(optional) Where to store the repos. By default, its ~/src')
+
+    args = parser.parse_args()
+
+    for org in args.orgs:
+        gh = GH(org, args.token, args.basepath)
+        gh.process_org()

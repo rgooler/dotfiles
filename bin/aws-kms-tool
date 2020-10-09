@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+import boto3
+from base64 import b64decode
+from base64 import b64encode
+import argparse
+
+def parse_args(printHelp=False):
+    parser = argparse.ArgumentParser(description='En/decrypt data from KMS')
+    parser.add_argument('--decrypt', '-d',
+                        help='Base64 encoded string to decrypt')
+    parser.add_argument('--encrypt', '-e',
+                        help='String to encrypt')
+    parser.add_argument('--keyid', '-k',
+                        default='arn:aws:kms:us-west-2:968664429377:key/d2e32dee-6b1c-4768-9f02-a1827001832c',
+                        help='Key ID to use when encrypting')
+    parser.add_argument('--region', '-r',
+                        default='us-west-2',
+                        help='Region the keys are in')
+    parser.add_argument('--access', '--aws_access_key_id',
+                        default=None,
+                        help='(optional) Override built in AWS_ACCESS_KEY_ID')
+    parser.add_argument('--secret', '--aws_secret_access_key',
+                        default=None,
+                        help='(optional) Override built in AWS_SECRET_ACCESS_KEY')
+
+    if printHelp:
+        parser.print_help()
+        return
+
+    args = parser.parse_args()
+    return args
+
+if __name__ == "__main__":
+    args = parse_args()
+    kms = boto3.client('kms', region_name=args.region,
+                       aws_access_key_id=args.access,
+                       aws_secret_access_key=args.secret)
+    if args.decrypt:
+        print kms.decrypt(CiphertextBlob=b64decode(args.decrypt))['Plaintext']
+    elif args.encrypt:
+        print b64encode(kms.encrypt(KeyId=args.keyid, Plaintext=args.encrypt)['CiphertextBlob'])
+    else:
+        print "Please choose to encrypt or decrypt something"
+        parse_args(printHelp=True)
+
