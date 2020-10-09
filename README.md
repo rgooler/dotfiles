@@ -5,6 +5,8 @@ These are my dotfiles, managed by [Dotbot][dotbot].
 
 To install, simply run the install script. It does the rest. And be sure to clone this repo with `--recursive` in order to grab the submodules that make it work.
 
+This also has a nice zsh theme that requires the powerline 'Hack' font. It can be found here: https://powerline.readthedocs.io/en/latest/installation.html#installation-on-various-platforms
+
 Notes
 -----
 
