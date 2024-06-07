@@ -1,0 +1,8 @@
+import pprint
+pp = pprint.PrettyPrinter(indent=2)
+pp.__call__ = pp.pprint
+
+try:
+    import requests
+except ImportError:
+    pass
