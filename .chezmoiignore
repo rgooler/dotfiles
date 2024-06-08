@@ -2,6 +2,7 @@ LICENSE
 README.md
 docs/
 .pre-commit-config.yaml
+.sudo_as_admin_successful
 {{ if eq .chezmoi.os "windows" }}
 *.sh
 Library
