@@ -1,0 +1,50 @@
+# .zshenv is sourced on all invocations of the shell, unless the -f option is set.
+# It should contain commands to set the command search path, plus other important environment variables.
+# .zshenv' should not contain commands that produce output or assume the shell is attached to a tty.
+export VISUAL=vi
+export EDITOR="$VISUAL"
+# fix for keybase/gpg import (https://github.com/keybase/keybase-issues/issues/2798)
+export GPG_TTY=$(tty)
+# Uncomment the following line to change how often to auto-update (in days).
+#export UPDATE_ZSH_DAYS=7
+# Set zsh-nvm to auto install/load versions from .nvmrc
+export NVM_AUTO_USE=true
+export NVM_COMPLETION=true
+# Disable homebrew auto updates
+export HOMEBREW_NO_AUTO_UPDATE=true
+# prevent oh-my-zsh from auto updating (updates happen via chezmoi -R apply/update)
+export DISABLE_AUTO_UPDATE="true"
+
+### asdf
+export ASDF_PYTHON_DEFAULT_PACKAGES_FILE="$XDG_CONFIG_HOME/asdf-python/default-python-packages"
+
+### XDG
+# Source: # https://wiki.archlinux.org/index.php/XDG_Base_Directory
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+export XDG_STATE_HOME="$HOME/.local/state"
+{{ if eq .osid "darwin" }}
+export XDG_RUNTIME_DIR="$TMPDIR"
+{{ else if not .headless }}
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+{{ else }}
+export XDG_RUNTIME_DIR="/tmp"
+{{ end }}
+{{ if not .headless }}
+export XDG_MUSIC_DIR="$HOME/Music"
+export XDG_VIDEOS_DIR="$HOME/Movies"
+export XDG_DESKTOP_DIR="$HOME/Desktop"
+export XDG_PICTURES_DIR="$HOME/Pictures"
+export XDG_DOWNLOAD_DIR="$HOME/Downloads"
+export XDG_DOCUMENTS_DIR="$HOME/Documents"
+export XDG_PUBLICSHARE_DIR="$HOME/Public"
+{{ end }}
+
+{{ if eq .osid "darwin" }}
+# required to fix poetry keychain issues:
+# https://github.com/python-poetry/poetry/issues/2692#issuecomment-1304400545
+export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+# set ssh-agent sock to 1password-agent
+export SSH_AUTH_SOCK=~/Library/Group\ Containers/2BUA8C4S2C.com.1password/t/agent.sock
+{{ end }}
