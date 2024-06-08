@@ -43,20 +43,14 @@
 {{   end }}
 {{ end }}
 
-{{/* string configs */}}
-{{   $email := "" }}
-{{   $username := "" }}
-{{ if eq $work true }}
-{{   $email := "workemail@company.com" }}
-{{   $username := "workuser" }}
-{{ else }}
-{{   $email := "user@legitemail.xyz" }}
-{{   $username := "jippen" }}
-{{ end }}
-
 [data]
-    name = {{ $username | quote}}
-    email = {{ $email | quote }}
+{{ if eq $work true }}
+    name = "workuser"
+    email = "workuser@company.com"
+{{ else if eq $personal }}
+    name = "jippen"
+    email = "user@legitemail.xyz"
+{{ end }}
     ephemeral = {{ $ephemeral }}
     headless = {{ $headless }}
     hostname = {{ $hostname | quote }}
