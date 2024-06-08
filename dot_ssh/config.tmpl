@@ -2,13 +2,6 @@
 # GLOBAL
 ########################
 Host *
-  Compression yes
-  ServerAliveInterval 60
-  ServerAliveCountMax 10
-  IdentitiesOnly yes
-  #ControlMaster auto
-  #ControlPath /tmp/ssh-%r@%h:%p
-  #ControlPersist yes
   {{ if eq .osid "darwin" }}
   UseKeychain yes
   # 1password ssh-agent
@@ -16,9 +9,6 @@ Host *
   {{ else if eq .osid "linux" }}
   IdentityAgent ~/.1password/agent.sock
   {{ end }}
-  AddKeysToAgent yes
-  PreferredAuthentications publickey
-  ForwardAgent no
   
 {{ if .personal }}
 {{ onepasswordRead "op://Homelab/SSH Config/notesPlain" }}
