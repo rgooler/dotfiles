@@ -44,12 +44,14 @@
 {{ end }}
 
 {{/* string configs */}}
+{{   $email := "" }}
+{{   $username := "" }}
 {{ if eq $work true }}
-{{   $email = "workemail@company.com" }}
-{{   $username = "workuser" }}
+{{   $email := "workemail@company.com" }}
+{{   $username := "workuser" }}
 {{ else }}
-{{   $email = "user@legitemail.xyz" }}
-{{   $username = "jippen" }}
+{{   $email := "user@legitemail.xyz" }}
+{{   $username := "jippen" }}
 {{ end }}
 
 [data]
