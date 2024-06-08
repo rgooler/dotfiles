@@ -109,13 +109,13 @@
     time                    # current time
     # =========================[ Line #2 ]=========================
     newline
-    {{ if or (.headless) (.ephemeral) }}
+    {{ if or (.headless) (.ephemeral) -}}
     ip                      # ip address and bandwidth usage for a specified network interface
     public_ip               # public IP address
-    {{ else }}
+    {{ else -}}
     # ip                    # ip address and bandwidth usage for a specified network interface
     # public_ip             # public IP address
-    {{ end }}
+    {{ end -}}
     # proxy                 # system-wide http/https/ftp proxy
     # battery               # internal battery
     # wifi                  # wifi speed
