@@ -25,6 +25,7 @@ packages:
         core:
             taps:
             brews:
+            - 'gnupg'
             casks:
             npm:
             pip:
