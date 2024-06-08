@@ -1,0 +1,3 @@
+############################ Begin .aliases_all ############################
+alias upall="/opt/homebrew/bin/brew update && /opt/homebrew/bin/brew upgrade && ~/.local/bin/git-config && ~/.local/bin/git-update && /opt/homebrew/bin/chezmoi -R update"
+{{ if lookPath "vim" }}alias vi="vim"{{ end }}
