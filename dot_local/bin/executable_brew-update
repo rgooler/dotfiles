@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Function to check the status of the last executed command
+check_status() {
+  if [ $? -ne 0 ]; then
+    echo "Error: $1 failed."
+    exit 1
+  fi
+}
+
+# Update Homebrew
+brew update
+check_status "brew update"
+
+# Upgrade all installed formulae
+brew upgrade
+check_status "brew upgrade"
+
+# Upgrade all installed casks
+for cask in $(brew list --cask); do
+  brew upgrade --cask "$cask"
+  check_status "brew upgrade --cask $cask"
+done
+
+echo "All upgrades completed successfully."
