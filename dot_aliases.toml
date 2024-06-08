@@ -1,0 +1,7 @@
+{{ template "aliases_all.tmpl" . }}
+{{ template "aliases_git.tmpl" . }}
+{{ if eq .osid "darwin" }}
+{{   template "aliases_macos.tmpl" . }}
+{{ else if eq .osid "linux" }}
+{{   template "aliases_linuxos.tmpl" . }}
+{{ end }}
