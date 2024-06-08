@@ -1,0 +1,16 @@
+#!/bin/bash
+
+{{ template "utils" . }}
+
+if exist brew; then
+    eval "$(brew shellenv)"
+    info "Running run_onchange_install-packages.sh..."
+{{ template "brew" . }}
+    if [ $? -eq 0 ]; then
+        success "Successfully installed brew packages."
+    else
+        fail "Some or all brew packages failed to install."
+    fi
+else
+    fail "Command 'brew' not found in PATH. Skipping brew packages."
+fi
