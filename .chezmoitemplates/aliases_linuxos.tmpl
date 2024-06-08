@@ -1,0 +1,7 @@
+
+############################ Begin .aliases_linuxos ############################
+
+alias upall="/home/linuxbrew/.linuxbrew/bin/brew update && brew upgrade && ~/bin/git-config && ~/bin/git-update && chezmoi -R update"
+{{ if stat "/home/linuxbrew/.linuxbrew/bin/chezmoi" }}alias cz="/home/linuxbrew/.linuxbrew/bin/chezmoi"
+{{ else if stat "$HOME/.local/share/bin/chezmoi" }}alias cz="$HOME/.local/share//bin/chezmoi"
+{{ else }}alias cz="$(which chezmoi)"{{ end }}
