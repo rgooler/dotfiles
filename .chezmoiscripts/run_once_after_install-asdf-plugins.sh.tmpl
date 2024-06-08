@@ -1,0 +1,41 @@
+#!/bin/bash
+
+{{ template "utils" }}
+
+if exist asdf; then
+    info "Running run_once_after-install-asdf.sh once..."
+
+    # Install asdf
+    # https://asdf-vm.com/guide/getting-started.html
+    # nodejs
+    if ! asdf list nodejs >/dev/null 2>&1; then
+        info "Installing nodejs with asdf."
+        asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git
+        asdf install nodejs latest
+        asdf global nodejs latest
+    fi
+
+    # golang
+    if ! asdf list golang >/dev/null 2>&1; then
+        info "Installing golang with asdf."
+        asdf plugin add golang https://github.com/kennyp/asdf-golang.git
+        asdf install golang latest
+        asdf global golang latest
+    fi
+
+    # python
+    if ! asdf list python >/dev/null 2>&1; then
+        info "Installing python with asdf."
+        asdf plugin add python
+        asdf install python latest
+        asdf global python latest
+    fi
+
+    # direnv
+    if ! asdf list direnv >/dev/null 2>&1; then
+        info "Installing direnv with asdf."
+        asdf plugin-add direnv
+        asdf direnv setup --shell zsh --version latest
+        asdf global direnv latest
+    fi
+fi
