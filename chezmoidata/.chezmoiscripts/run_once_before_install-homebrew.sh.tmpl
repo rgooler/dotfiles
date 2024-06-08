@@ -1,0 +1,28 @@
+#!/bin/bash
+{{ if lookPath "brew" }}
+{{ else }}
+
+INSTALL_CHECK=false
+
+{{ template "utils" }}
+
+{{ if eq .osid "linux" }}
+INSTALL_CHECK=true
+{{ if eq .chezmoi.arch "arm64" }}
+INSTALL_CHECK=false
+{{ end }}
+{{ else if eq .osid "darwin" }}
+INSTALL_CHECK=true
+{{ end }}
+
+if [ "$INSTALL_CHECK" = true ]; then
+  info "Homebrew not found, installing.."
+  if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+    # Command succeeded
+    success "Homebrew installed successful."
+  else
+    # Command failed
+    fail "Homebrew failed to install."
+  fi
+fi
+{{ end }}
