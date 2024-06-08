@@ -44,10 +44,10 @@
 {{ end }}
 
 [data]
-{{ if true eq $work true }}
+{{ if $work }}
     name = "workuser"
     email = "workuser@company.com"
-{{ else if true eq $personal }}
+{{ else if $personal }}
     name = "jippen"
     email = "user@legitemail.xyz"
 {{ end }}
