@@ -1,0 +1,71 @@
+packages:
+    core:
+        taps:
+        - 'homebrew/bundle'
+        - 'homebrew/services'
+        brews:
+        - 'age'
+        - 'asdf'
+        - 'curl'
+        - 'chezmoi'
+        - 'coreutils'
+        - 'direnv'
+        - 'git'
+        - 'grep'
+        - 'htop'
+        - 'jq'
+        - 'nmap'
+        - 'sqlite'
+        - 'tree'
+        - 'vim'
+        - 'wget'
+        - 'zsh'
+        casks:
+    personal:
+        core:
+            taps:
+            brews:
+            casks:
+            npm:
+            pip:
+        darwin:
+            taps:
+            brews:
+            - 'ripgrep'
+            - 'rsync'
+            - 'semgrep'
+            casks:
+            - 'google-chrome'
+            - 'signal'
+            - 'tailscale'
+            - 'visual-studio-code'
+            - 'vlc'
+        linux:
+            taps:
+            brews:
+            casks:
+    work:
+        core:
+            taps:
+            brews:
+            casks:
+            npm:
+            pip:
+        darwin:
+            taps:
+            brews:
+            casks:
+        linux:
+            taps:
+            brews:
+            casks:
+    darwin:
+        taps:
+        - '1password/tap'
+        brews:
+        casks:
+        - '1password-cli'
+    linux:
+        taps:
+        brews:
+        casks:
