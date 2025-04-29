@@ -57,3 +57,10 @@
     personal = {{ $personal }}
     work = {{ $work }}
     osid = {{ $osID | quote }}
+
+[run]
+
+{{ if not eq .chezmoi.os "windows" and not $headless }}
+  before = ["~/.local/share/chezmoi/scripts/ensure_bin.sh"]
+  after = ["~/.local/share/chezmoi/scripts/install_dev_tools.sh"]
+{{ end }}
