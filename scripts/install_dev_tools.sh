@@ -1,60 +1,68 @@
-#!/usr/bin/env bash
+#!/bin/bash -x
 set -euo pipefail
 
-# --- Install git (OS-specific) ---
-if ! command -v git >/dev/null; then
-  echo "Installing git..."
-  case "$(uname -s)" in
-    Linux)
-      if command -v apt-get >/dev/null; then
-        sudo apt-get update && sudo apt-get install -y git  # Ubuntu/Debian
-      elif command -v dnf >/dev/null; then
-        sudo dnf install -y git  # Fedora
-      elif command -v pacman >/dev/null; then
-        sudo pacman -Sy git  # Arch
-      fi
-      ;;
-    Darwin)
-      xcode-select --install
-      ;;
-  esac
-fi
+# --- Install asdf (latest binary) ---
+install_asdf() {
+  if ! command -v asdf >/dev/null || ! asdf --version | grep -q "0.16"; then
+    echo "Installing asdf (v0.16.x)..."
+    case "$(uname -s)" in
+      Darwin)
+        # macOS: Use Homebrew (recommended)
+        if ! command -v brew >/dev/null; then
+          echo "Homebrew not found. Installing..."
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        fi
+        brew install asdf
+        ;;
+      Linux)
+        # Linux: Download precompiled binary
+        LATEST_ASDF=$(curl -s https://api.github.com/repos/asdf-vm/asdf/releases/latest | grep 'browser_download_url.*linux' | fgrep 'amd64.tar.gz' |fgrep -v '.tar.gz.' | cut -d '"' -f 4)
+        curl -L "$LATEST_ASDF" | tar -xzv -C ~/bin/
+        chmod +x ~/bin/asdf
+        ;;
+    esac
+  fi
+}
 
+# --- Configure asdf for Zsh ---
+configure_asdf() {
+  local zshrc=~/.zshrc
+  local asdf_data_dir="${ASDF_DATA_DIR:-$HOME/.asdf}"
 
-# --- Install asdf (latest Git version) ---
-if ! command -v asdf >/dev/null; then
-  echo "Installing asdf..."
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$(git ls-remote --tags https://github.com/asdf-vm/asdf.git | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*' | sort -rV | head -n 1 | grep -o '[^/]*$')"
-  
-  # Add to zshrc (cross-shell compatible)
-  grep -qxF '. "$HOME/.asdf/asdf.sh"' ~/.zshrc || echo -e '\n. "$HOME/.asdf/asdf.sh"' >> ~/.zshrc
-  grep -qxF 'fpath=(${ASDF_DIR}/completions $fpath)' ~/.zshrc || echo -e '\nfpath=(${ASDF_DIR}/completions $fpath)' >> ~/.zshrc
-fi
+  # Add asdf to PATH and set ASDF_DATA_DIR
+  if ! grep -q "asdf.sh" "$zshrc"; then
+    echo -e "\n# asdf 0.16.x config" >> "$zshrc"
+    echo "export ASDF_DATA_DIR=\"$asdf_data_dir\"" >> "$zshrc"
+    echo "export PATH=\"\$ASDF_DATA_DIR/shims:\$PATH\"" >> "$zshrc"
+    echo ". \"\$ASDF_DATA_DIR/asdf.sh\"" >> "$zshrc"
+  fi
+
+  # Initialize completions
+  mkdir -p "$asdf_data_dir/completions"
+  asdf completion zsh > "$asdf_data_dir/completions/_asdf"
+}
 
 # --- Install direnv (OS-specific) ---
-if ! command -v direnv >/dev/null; then
-  echo "Installing direnv..."
-  case "$(uname -s)" in
-    Linux)
-      if command -v apt-get >/dev/null; then
-        sudo apt-get update && sudo apt-get install -y direnv  # Ubuntu/Debian
-      elif command -v dnf >/dev/null; then
-        sudo dnf install -y direnv  # Fedora
-      elif command -v pacman >/dev/null; then
-        sudo pacman -Sy direnv  # Arch
-      fi
-      ;;
-    Darwin)
-      brew install direnv  # macOS
-      ;;
-  esac
+install_direnv() {
+  if ! command -v direnv >/dev/null; then
+    case "$(uname -s)" in
+      Darwin) brew install direnv ;;
+      Linux)
+        if command -v apt-get >/dev/null; then
+          sudo apt-get install -y direnv  # Ubuntu/Debian
+        elif command -v dnf >/dev/null; then
+          sudo dnf install -y direnv      # Fedora
+        fi
+        ;;
+    esac
+    # Add direnv hook to Zsh
+    grep -qxF 'eval "$(direnv hook zsh)"' ~/.zshrc || echo -e '\neval "$(direnv hook zsh)"' >> ~/.zshrc
+  fi
+}
 
-  # Add hook to zshrc
-  grep -qxF 'eval "$(direnv hook zsh)"' ~/.zshrc || echo -e '\neval "$(direnv hook zsh)"' >> ~/.zshrc
-fi
+# --- Main ---
+install_asdf
+configure_asdf
+install_direnv
 
-# --- Initialize asdf plugins (optional) ---
-if command -v asdf >/dev/null && [ ! -d ~/.asdf/plugins/nodejs ]; then
-  asdf plugin-add nodejs https://github.com/asdf-vm/asdf-nodejs.git
-  # Add other plugins as needed (e.g., python, ruby)
-fi
+echo "Done! Restart your shell or run: exec zsh"
