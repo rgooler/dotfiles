@@ -1,10 +1,10 @@
 #!/bin/bash -x
 set -euo pipefail
 
-# --- Install asdf (latest binary) ---
+# --- Install asdf (v0.18) ---
 install_asdf() {
-  if ! command -v asdf >/dev/null || ! asdf --version | grep -q "0.16"; then
-    echo "Installing asdf (v0.16.x)..."
+  if ! command -v asdf >/dev/null || ! asdf --version | grep -q "0.18"; then
+    echo "Installing asdf (v0.18.x)..."
     case "$(uname -s)" in
       Darwin)
         # macOS: Use Homebrew (recommended)
@@ -15,9 +15,16 @@ install_asdf() {
         brew install asdf
         ;;
       Linux)
-        # Linux: Download precompiled binary
-        LATEST_ASDF=$(curl -s https://api.github.com/repos/asdf-vm/asdf/releases/latest | grep 'browser_download_url.*linux' | fgrep 'amd64.tar.gz' |fgrep -v '.tar.gz.' | cut -d '"' -f 4)
-        curl -L "$LATEST_ASDF" | tar -xzv -C ~/bin/
+        # Linux: Download precompiled binary from GitHub releases
+        mkdir -p ~/bin
+        ASDF_VERSION="v0.18.0"
+        ARCH=$(uname -m)
+        if [ "$ARCH" = "x86_64" ]; then
+          ARCH="amd64"
+        fi
+        DOWNLOAD_URL="https://github.com/asdf-vm/asdf/releases/download/${ASDF_VERSION}/asdf-${ASDF_VERSION}-linux-${ARCH}.tar.gz"
+        echo "Downloading asdf from: $DOWNLOAD_URL"
+        curl -L "$DOWNLOAD_URL" | tar -xzv -C ~/bin/
         chmod +x ~/bin/asdf
         ;;
     esac
@@ -30,16 +37,22 @@ configure_asdf() {
   local asdf_data_dir="${ASDF_DATA_DIR:-$HOME/.asdf}"
 
   # Add asdf to PATH and set ASDF_DATA_DIR
-  if ! grep -q "asdf.sh" "$zshrc"; then
-    echo -e "\n# asdf 0.16.x config" >> "$zshrc"
+  if ! grep -q "asdf shims" "$zshrc"; then
+    echo -e "\n# asdf 0.18.x config" >> "$zshrc"
     echo "export ASDF_DATA_DIR=\"$asdf_data_dir\"" >> "$zshrc"
     echo "export PATH=\"\$ASDF_DATA_DIR/shims:\$PATH\"" >> "$zshrc"
-    echo ". \"\$ASDF_DATA_DIR/asdf.sh\"" >> "$zshrc"
   fi
 
-  # Initialize completions
+  # Initialize completions for zsh
   mkdir -p "$asdf_data_dir/completions"
-  asdf completion zsh > "$asdf_data_dir/completions/_asdf"
+  if command -v asdf >/dev/null; then
+    asdf completion zsh > "$asdf_data_dir/completions/_asdf" 2>/dev/null || true
+    # Add completion path to zsh
+    if ! grep -q "asdf completions" "$zshrc"; then
+      echo "fpath=(\$ASDF_DATA_DIR/completions \$fpath)" >> "$zshrc"
+      echo "autoload -Uz compinit && compinit" >> "$zshrc"
+    fi
+  fi
 }
 
 # --- Install direnv (OS-specific) ---

@@ -19,3 +19,5 @@ Library
 {{ if eq .chezmoi.os "darwin" }}
 AppData
 {{ end }}
+
+.python_history
