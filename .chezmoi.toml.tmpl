@@ -60,7 +60,7 @@
 
 [run]
 
-{{ if not eq .chezmoi.os "windows" and not $headless }}
+{{ if and (not (eq .chezmoi.os "windows")) (not $headless) }}
   before = ["~/.local/share/chezmoi/scripts/ensure_bin.sh"]
   after = ["~/.local/share/chezmoi/scripts/install_dev_tools.sh"]
 {{ end }}
