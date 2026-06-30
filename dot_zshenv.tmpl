@@ -7,16 +7,10 @@ export EDITOR="$VISUAL"
 export GPG_TTY=$(tty)
 # Uncomment the following line to change how often to auto-update (in days).
 #export UPDATE_ZSH_DAYS=7
-# Set zsh-nvm to auto install/load versions from .nvmrc
-export NVM_AUTO_USE=true
-export NVM_COMPLETION=true
 # Disable homebrew auto updates
 export HOMEBREW_NO_AUTO_UPDATE=true
 # prevent oh-my-zsh from auto updating (updates happen via chezmoi -R apply/update)
 export DISABLE_AUTO_UPDATE="true"
-
-### asdf
-export ASDF_PYTHON_DEFAULT_PACKAGES_FILE="$XDG_CONFIG_HOME/asdf-python/default-python-packages"
 
 ### XDG
 # Source: # https://wiki.archlinux.org/index.php/XDG_Base_Directory

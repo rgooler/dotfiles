@@ -5,26 +5,28 @@ packages:
         - 'homebrew/services'
         brews:
         - 'age'
-        - 'asdf'
-        - 'curl'
+        - 'btop'
         - 'chezmoi'
         - 'coreutils'
-        - 'direnv'
+        - 'curl'
         - 'git'
         - 'grep'
         - 'htop'
         - 'jq'
+        - 'mise'
         - 'nmap'
         - 'sqlite'
         - 'tree'
         - 'vim'
         - 'wget'
+        - 'zoxide'
         - 'zsh'
         casks:
     personal:
         core:
             taps:
             brews:
+            - 'atuin'
             - 'gnupg'
             casks:
             npm:
@@ -38,13 +40,23 @@ packages:
             casks:
             - 'google-chrome'
             - 'signal'
-            - 'tailscale'
+            - 'tailscale-app'
             - 'visual-studio-code'
             - 'vlc'
         linux:
             taps:
             brews:
             casks:
+            # Fedora desktop: vendor dnf repos are configured in
+            # run_onchange_install-linux-packages.sh.tmpl
+            dnf:
+            - 'code'                 # VS Code (packages.microsoft.com)
+            - 'google-chrome-stable' # Chrome (dl.google.com)
+            - 'tailscale'            # Tailscale (pkgs.tailscale.com)
+            - '1password'            # 1Password desktop app (for SSH agent)
+            flatpak:
+            - 'org.signal.Signal'
+            - 'org.videolan.VLC'
     work:
         core:
             taps:

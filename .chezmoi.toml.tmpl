@@ -28,11 +28,13 @@
 {{ end }}
 
 {{ if not $ephemeral }}
-{{   if contains "jippen" $hostname }}
+{{   $h := lower $hostname }}
+{{/* known personal/work machines, matched case-insensitively; add new hosts here */}}
+{{   $personalHosts := list "macbook neo" "black-laptop" "toaster" }}
+{{   $workHosts := list "work-laptop" }}
+{{   if or (contains "jippen" $h) (has $h $personalHosts) }}
 {{     $personal = true }}
-{{   else if eq $hostname "black-laptop" }}
-{{     $personal = true }}
-{{   else if eq $hostname "work-laptop" }}
+{{   else if has $h $workHosts }}
 {{     $work = true }}
 {{   else if stdinIsATTY }}
 {{     $headless = promptBoolOnce . "headless" "headless" }}
@@ -58,9 +60,7 @@
     work = {{ $work }}
     osid = {{ $osID | quote }}
 
-[run]
-
-{{ if and (not (eq .chezmoi.os "windows")) (not $headless) }}
-  before = ["~/.local/share/chezmoi/scripts/ensure_bin.sh"]
-  after = ["~/.local/share/chezmoi/scripts/install_dev_tools.sh"]
-{{ end }}
+[onepassword]
+    # Use the 1Password desktop app's existing session (biometric) instead of
+    # running `op signin` in the terminal. Requires the desktop app + CLI integration.
+    prompt = false

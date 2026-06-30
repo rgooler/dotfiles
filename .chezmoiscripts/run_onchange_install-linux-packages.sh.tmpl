@@ -1,0 +1,84 @@
+#!/bin/bash
+
+{{ template "utils" }}
+
+{{ if eq .osid "linux" }}
+{{ if and (eq .chezmoi.osRelease.id "fedora") .personal (not .headless) }}
+
+# Re-run when the desktop package set changes:
+# dnf:     {{ .packages.personal.linux.dnf }}
+# flatpak: {{ .packages.personal.linux.flatpak }}
+
+set -uo pipefail
+
+info "Configuring vendor dnf repositories for Fedora desktop packages..."
+
+# --- VS Code (Microsoft) ---
+if [ ! -f /etc/yum.repos.d/vscode.repo ]; then
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    sudo sh -c 'cat > /etc/yum.repos.d/vscode.repo' <<'REPO'
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+enabled=1
+autorefresh=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+REPO
+fi
+
+# --- Google Chrome ---
+if [ ! -f /etc/yum.repos.d/google-chrome.repo ]; then
+    sudo sh -c 'cat > /etc/yum.repos.d/google-chrome.repo' <<'REPO'
+[google-chrome]
+name=google-chrome
+baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64
+enabled=1
+gpgcheck=1
+gpgkey=https://dl.google.com/linux/linux_signing_key.pub
+REPO
+fi
+
+# --- Tailscale ---
+if [ ! -f /etc/yum.repos.d/tailscale.repo ]; then
+    sudo dnf config-manager --add-repo https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+fi
+
+# --- 1Password (same repo as the CLI; ensure present for the desktop app) ---
+if [ ! -f /etc/yum.repos.d/1password.repo ]; then
+    sudo rpm --import https://downloads.1password.com/linux/keys/1password.asc
+    sudo sh -c 'cat > /etc/yum.repos.d/1password.repo' <<'REPO'
+[1password]
+name=1Password Stable Channel
+baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://downloads.1password.com/linux/keys/1password.asc
+REPO
+fi
+
+# --- install dnf packages ---
+DNF_PKGS="{{ range .packages.personal.linux.dnf }}{{ . }} {{ end }}"
+info "Installing dnf packages: $DNF_PKGS"
+if sudo dnf install -y $DNF_PKGS; then
+    success "dnf packages installed."
+else
+    fail "Some dnf packages failed to install."
+fi
+
+# --- Flatpak apps (Flathub) ---
+if ! command -v flatpak >/dev/null 2>&1; then
+    sudo dnf install -y flatpak
+fi
+flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+FLATPAK_PKGS="{{ range .packages.personal.linux.flatpak }}{{ . }} {{ end }}"
+info "Installing flatpak apps: $FLATPAK_PKGS"
+if flatpak install -y flathub $FLATPAK_PKGS; then
+    success "flatpak apps installed."
+else
+    fail "Some flatpak apps failed to install."
+fi
+
+{{ end }}
+{{ end }}

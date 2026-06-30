@@ -21,11 +21,6 @@
   url = "https://github.com/romkatv/powerlevel10k.git"
   exact = true
   refreshPeriod = "72h"
-[".oh-my-zsh/custom/plugins/zsh-nvm"]
-  type = "git-repo"
-  url = "https://github.com/lukechilds/zsh-nvm.git"
-  exact = true
-  refreshPeriod = "72h"
 {{- if and (not .ephemeral) (not .headless) }}
 {{-   $fontDir := "" }}
 {{-   if eq .chezmoi.os "darwin" }}

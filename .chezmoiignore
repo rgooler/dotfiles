@@ -21,3 +21,11 @@ AppData
 {{ end }}
 
 .python_history
+
+# repo-internal helper scripts invoked by chezmoi, not deployed to $HOME
+scripts
+
+{{ if not .personal }}
+# atuin is personal-machines-only
+.config/atuin
+{{ end }}
