@@ -6,12 +6,8 @@ INSTALL_CHECK=false
 
 {{ template "utils" }}
 
-{{ if eq .osid "linux" }}
-INSTALL_CHECK=true
-{{ if eq .chezmoi.arch "arm64" }}
-INSTALL_CHECK=false
-{{ end }}
-{{ else if eq .osid "darwin" }}
+{{/* Homebrew is macOS-only in this setup; Linux uses dnf + mise. */}}
+{{ if eq .osid "darwin" }}
 INSTALL_CHECK=true
 {{ end }}
 

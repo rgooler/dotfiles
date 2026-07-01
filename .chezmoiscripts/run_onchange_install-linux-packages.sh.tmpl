@@ -3,14 +3,35 @@
 {{ template "utils" }}
 
 {{ if eq .osid "linux" }}
-{{ if and (eq .chezmoi.osRelease.id "fedora") .personal (not .headless) }}
-
-# Re-run when the desktop package set changes:
-# dnf:     {{ .packages.personal.linux.dnf }}
-# flatpak: {{ .packages.personal.linux.flatpak }}
+{{ if eq .chezmoi.osRelease.id "fedora" }}
 
 set -uo pipefail
 
+# Re-run when the Linux package sets change:
+# cli:     {{ .packages.linux.dnf }}
+# desktop: {{ .packages.personal.linux.dnf }} / {{ .packages.personal.linux.flatpak }}
+
+# --- CLI tools via dnf (all Fedora machines; no Homebrew on Linux) ---
+CLI_PKGS="{{ range .packages.linux.dnf }}{{ . }} {{ end }}"
+info "Installing CLI packages via dnf: $CLI_PKGS"
+if sudo dnf install -y $CLI_PKGS; then
+    success "dnf CLI packages installed."
+else
+    fail "Some dnf CLI packages failed to install."
+fi
+
+{{ if .personal }}
+# --- atuin via mise (not packaged in Fedora repos) ---
+if exist mise; then
+    info "Installing atuin via mise..."
+    if mise use -g atuin@latest; then
+        success "atuin installed via mise."
+    else
+        fail "atuin (mise) install failed."
+    fi
+fi
+
+{{ if not .headless }}
 info "Configuring vendor dnf repositories for Fedora desktop packages..."
 
 # --- VS Code (Microsoft) ---
@@ -58,13 +79,13 @@ gpgkey=https://downloads.1password.com/linux/keys/1password.asc
 REPO
 fi
 
-# --- install dnf packages ---
-DNF_PKGS="{{ range .packages.personal.linux.dnf }}{{ . }} {{ end }}"
-info "Installing dnf packages: $DNF_PKGS"
-if sudo dnf install -y $DNF_PKGS; then
-    success "dnf packages installed."
+# --- install desktop dnf packages ---
+GUI_PKGS="{{ range .packages.personal.linux.dnf }}{{ . }} {{ end }}"
+info "Installing desktop dnf packages: $GUI_PKGS"
+if sudo dnf install -y $GUI_PKGS; then
+    success "desktop dnf packages installed."
 else
-    fail "Some dnf packages failed to install."
+    fail "Some desktop dnf packages failed to install."
 fi
 
 # --- Flatpak apps (Flathub) ---
@@ -80,5 +101,7 @@ else
     fail "Some flatpak apps failed to install."
 fi
 
+{{ end }}
+{{ end }}
 {{ end }}
 {{ end }}

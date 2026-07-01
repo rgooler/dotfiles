@@ -13,14 +13,9 @@ if ! exist mise; then
         brew install mise
     fi
 {{ else if eq .osid "linux" }}
-    if exist brew; then
-        info "Installing mise via Homebrew..."
-        brew install mise
-    else
-        info "Installing mise via mise.run installer..."
-        curl -fsSL https://mise.run | sh
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
+    info "Installing mise via mise.run installer..."
+    curl -fsSL https://mise.run | sh
+    export PATH="$HOME/.local/bin:$PATH"
 {{ end }}
 fi
 

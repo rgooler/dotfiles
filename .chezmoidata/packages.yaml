@@ -79,6 +79,20 @@ packages:
         - 'font-hack-nerd-font'
         - 'font-meslo-lg-nerd-font'
     linux:
-        taps:
-        brews:
-        casks:
+        # CLI tools via dnf (all Linux machines). Runtimes (node/go/python) come
+        # from mise; mise itself from mise.run; atuin via mise on personal boxes.
+        dnf:
+        - 'age'
+        - 'btop'
+        - 'chezmoi'
+        - 'git'
+        - 'gnupg2'
+        - 'htop'
+        - 'jq'
+        - 'nmap'
+        - 'sqlite'
+        - 'tree'
+        - 'vim-enhanced'
+        - 'wget'
+        - 'zoxide'
+        - 'zsh'
