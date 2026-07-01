@@ -1,0 +1,32 @@
+#!/bin/bash
+# Ensure the chezmoi age identity exists BEFORE encrypted files are decrypted.
+# Runs once, before files (and after install-package-managers, so `op` exists).
+# On 1Password machines the key is pulled from 1P; elsewhere (e.g. Steam Deck)
+# place ~/.config/chezmoi/key.txt by hand before running `chezmoi apply`.
+
+{{ template "utils" }}
+
+KEY="$HOME/.config/chezmoi/key.txt"
+
+if [ -f "$KEY" ]; then
+    exit 0
+fi
+
+mkdir -p "$(dirname "$KEY")"
+
+{{ if eq .trust "personal" }}
+if exist op; then
+    info "Fetching chezmoi age key from 1Password..."
+    if op read "op://chezmoi/Chezmoi age key/credential" > "$KEY" 2>/dev/null && [ -s "$KEY" ]; then
+        chmod 600 "$KEY"
+        success "chezmoi age key installed at $KEY"
+    else
+        rm -f "$KEY"
+        fail_exit "Could not read age key from 1Password. Place it at $KEY manually, then re-run 'chezmoi apply'."
+    fi
+else
+    fail_exit "op not found and $KEY is missing. Place the age key at $KEY manually, then re-run 'chezmoi apply'."
+fi
+{{ else }}
+fail_exit "$KEY is missing. Place the chezmoi age key at $KEY manually, then re-run 'chezmoi apply'."
+{{ end }}

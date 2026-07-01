@@ -1,0 +1,199 @@
+#!/bin/bash
+# Bootstrap package managers + package sources (repos) + the password manager.
+# Runs ONCE, BEFORE dotfiles, so `op` exists before secret files (ssh/kube)
+# render. Dispatches by .pkgmgr (brew|dnf|apt); repos are added based on which
+# capabilities/profiles this machine has (.gui, has "dev" .profiles, ...).
+
+{{ template "utils" }}
+
+set -uo pipefail
+
+{{ if eq .pkgmgr "brew" }}
+##############################################################################
+# macOS: Homebrew + (gui) 1Password
+##############################################################################
+if ! exist brew; then
+    info "Homebrew not found, installing..."
+    if /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+        success "Homebrew installed."
+    else
+        fail "Homebrew failed to install."
+    fi
+fi
+{{ if .gui }}
+if [ ! -d "/Applications/1Password.app" ]; then
+    info "Installing 1Password.app..."
+    if /usr/bin/curl -fsSL -o "$HOME/Downloads/1Password.zip" "https://downloads.1password.com/mac/1Password.zip" \
+        && unzip -q "$HOME/Downloads/1Password.zip" -d "$HOME/Downloads" \
+        && mv "$HOME/Downloads/1Password.app" "/Applications/"; then
+        success "1Password.app installed."
+    else
+        fail "1Password.app install failed."
+    fi
+fi
+if ! exist op && [ ! -x /opt/homebrew/bin/op ]; then
+    info "Installing 1password-cli..."
+    if brew install --cask 1password-cli; then success "1password-cli installed."; else fail "1password-cli install failed."; fi
+fi
+{{ end }}
+
+{{ else if eq .pkgmgr "dnf" }}
+##############################################################################
+# Fedora: password manager + repos (packages installed later)
+##############################################################################
+# --- 1Password CLI (all machines; needed before secret files render) ---
+if [ ! -x /usr/bin/op ]; then
+    info "Installing 1Password CLI (dnf)..."
+    sudo rpm --import https://downloads.1password.com/linux/keys/1password.asc
+    if [ ! -f /etc/yum.repos.d/1password.repo ]; then
+        sudo sh -c 'cat > /etc/yum.repos.d/1password.repo' <<'REPO'
+[1password]
+name=1Password Stable Channel
+baseurl=https://downloads.1password.com/linux/rpm/stable/$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://downloads.1password.com/linux/keys/1password.asc
+REPO
+    fi
+    if sudo dnf install -y 1password-cli; then success "1Password CLI installed."; else fail "1Password CLI install failed."; fi
+fi
+
+# --- mise repo (baseline.all includes mise) ---
+if [ ! -f /etc/yum.repos.d/mise.repo ]; then
+    info "Adding mise repo..."
+    sudo sh -c 'cat > /etc/yum.repos.d/mise.repo' <<'REPO'
+[mise]
+name=mise
+baseurl=https://mise.jdx.dev/rpm
+enabled=1
+gpgcheck=1
+gpgkey=https://mise.jdx.dev/gpg-key.pub
+REPO
+fi
+
+{{ if has "dev" .profiles }}
+# --- dev profile repos: GitHub CLI + Docker ---
+if [ ! -f /etc/yum.repos.d/gh-cli.repo ]; then
+    sudo sh -c 'cat > /etc/yum.repos.d/gh-cli.repo' <<'REPO'
+[gh-cli]
+name=GitHub CLI
+baseurl=https://cli.github.com/packages/rpm
+enabled=1
+gpgcheck=1
+gpgkey=https://cli.github.com/packages/githubcli-archive-keyring.gpg
+REPO
+fi
+if [ ! -f /etc/yum.repos.d/docker-ce.repo ]; then
+    sudo sh -c 'cat > /etc/yum.repos.d/docker-ce.repo' <<'REPO'
+[docker-ce-stable]
+name=Docker CE Stable - $basearch
+baseurl=https://download.docker.com/linux/fedora/$releasever/$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/fedora/gpg
+REPO
+fi
+{{ end }}
+
+{{ if .gui }}
+# --- gui repos: VS Code + Tailscale (1Password repo already added above) ---
+if [ ! -f /etc/yum.repos.d/vscode.repo ]; then
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    sudo sh -c 'cat > /etc/yum.repos.d/vscode.repo' <<'REPO'
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+enabled=1
+autorefresh=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+REPO
+fi
+if [ ! -f /etc/yum.repos.d/tailscale.repo ]; then
+    sudo sh -c 'cat > /etc/yum.repos.d/tailscale.repo' <<'REPO'
+[tailscale-stable]
+name=Tailscale stable
+baseurl=https://pkgs.tailscale.com/stable/fedora/$basearch
+enabled=1
+type=rpm
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://pkgs.tailscale.com/stable/fedora/repo.gpg
+REPO
+fi
+{{ end }}
+
+{{ else if eq .pkgmgr "apt" }}
+##############################################################################
+# Debian/Ubuntu/Kali (UNTESTED — no Debian box available to verify)
+##############################################################################
+export DEBIAN_FRONTEND=noninteractive
+ARCH="$(dpkg --print-architecture)"
+sudo install -m 0755 -d /etc/apt/keyrings /usr/share/keyrings
+sudo apt-get update -y
+sudo apt-get install -y curl wget gnupg ca-certificates apt-transport-https
+
+# --- chezmoi (not in apt repos) ---
+if ! exist chezmoi; then
+    info "Installing chezmoi via get.chezmoi.io..."
+    sudo sh -c "$(curl -fsSL get.chezmoi.io)" -- -b /usr/local/bin
+fi
+
+# --- 1Password CLI (all machines) ---
+if [ ! -x /usr/bin/op ]; then
+    info "Installing 1Password CLI (apt)..."
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/${ARCH} stable main" | sudo tee /etc/apt/sources.list.d/1password.list
+    sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/
+    curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol
+    sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+fi
+
+# --- mise repo (baseline.all includes mise) ---
+if [ ! -f /etc/apt/sources.list.d/mise.list ]; then
+    wget -qO - https://mise.jdx.dev/gpg-key.pub | sudo gpg --dearmor -o /etc/apt/keyrings/mise-archive-keyring.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/mise-archive-keyring.gpg arch=${ARCH}] https://mise.jdx.dev/deb stable main" | sudo tee /etc/apt/sources.list.d/mise.list
+fi
+
+# --- charm repo (glow is not in base apt) ---
+if [ ! -f /etc/apt/sources.list.d/charm.list ]; then
+    curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list
+fi
+
+{{ if has "dev" .profiles }}
+# --- dev profile repos: GitHub CLI + Docker ---
+if [ ! -f /etc/apt/sources.list.d/github-cli.list ]; then
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg
+    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list
+fi
+# Docker: base distro id ("ubuntu"/"debian"); Kali/Parrot fall back to debian
+if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+    DOCKER_DISTRO="$(. /etc/os-release; echo "${ID_LIKE:-$ID}" | awk '{print $1}')"
+    case "$DOCKER_DISTRO" in ubuntu) DOCKER_DISTRO=ubuntu ;; *) DOCKER_DISTRO=debian ;; esac
+    DOCKER_CODENAME="$(. /etc/os-release; echo "${VERSION_CODENAME:-bookworm}")"
+    curl -fsSL "https://download.docker.com/linux/${DOCKER_DISTRO}/gpg" | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${DOCKER_DISTRO} ${DOCKER_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list
+fi
+{{ end }}
+
+{{ if .gui }}
+# --- gui repos: VS Code + Tailscale (1Password repo already added above) ---
+if [ ! -f /etc/apt/sources.list.d/vscode.list ]; then
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft.gpg
+    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list
+fi
+if [ ! -f /etc/apt/sources.list.d/tailscale.list ]; then
+    DIST_CODENAME="$(. /etc/os-release; echo "${VERSION_CODENAME:-bookworm}")"
+    BASE_DISTRO="$(. /etc/os-release; echo "${ID}")"
+    case "$BASE_DISTRO" in ubuntu) TS_BASE=ubuntu ;; *) TS_BASE=debian ;; esac
+    curl -fsSL "https://pkgs.tailscale.com/stable/${TS_BASE}/${DIST_CODENAME}.noarmor.gpg" | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+    curl -fsSL "https://pkgs.tailscale.com/stable/${TS_BASE}/${DIST_CODENAME}.tailscale-keyring.list" | sudo tee /etc/apt/sources.list.d/tailscale.list >/dev/null
+fi
+{{ end }}
+
+sudo apt-get update -y
+{{ if not (lookPath "op") }}sudo apt-get install -y 1password-cli || fail "1password-cli apt install failed"{{ end }}
+{{ end }}

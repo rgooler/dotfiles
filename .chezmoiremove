@@ -4,10 +4,11 @@ Brewfile*
 .CFUserTextEncoding
 .dccache
 .DS_Store
-.bash_logout
-.bash_profile
+# kept during bash->zsh transition; uncomment once fully on zsh
+#.bash_logout
+#.bash_profile
 .bash_sessions/
-.bashrc
+#.bashrc
 .bash_local
 .byobu/
 .fzf.bash

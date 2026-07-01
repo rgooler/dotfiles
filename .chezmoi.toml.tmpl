@@ -1,64 +1,107 @@
-{{/* boolean feature tags */}}
-{{ $ephemeral := false }}{{/* true if this machine is ephemeral, e.g. a cloud or VM instance */}}
-{{ $headless := false }}{{/* true if this machine does not have a screen and keyboard */}}
-{{ $personal := false }}{{/* true if this machine should have personal secrets */}}
-{{ $work := false }}{{/* true if this machine should have work related things and not personal */}}
-{{ "" }}
+{{/* ---------------------------------------------------------------------------
+     Machine model: one ROLE per machine -> derived capabilities.
 
+       roles:    desktop | work | k8s | nas | server | vm
+       derived:  gui, trust (personal|work|none), homelab, ephemeral, headless
+       profiles: opt-in package bundles (dev, media, ctf)
+
+     Gate on the derived CAPABILITY that matches intent, never on the role name:
+       desktop apps -> {{ "{{ if .gui }}" }}
+       personal id -> {{ "{{ if eq .trust \"personal\" }}" }}
+       kube/homelab -> {{ "{{ if .homelab }}" }}
+       a bundle     -> {{ "{{ if has \"ctf\" .profiles }}" }}
+   --------------------------------------------------------------------------- */}}
+
+{{/* --- OS + package manager --- */}}
 {{ $osID := .chezmoi.os }}
-{{ if (and (eq .chezmoi.os "linux-ubuntu") (hasKey .chezmoi.osRelease "id")) }}
-{{   $osID = printf "%s-%s" .chezmoi.os .chezmoi.osRelease.id }}
-{{ end }}
-
-{{/* detect GitHub codespaces, VSCode remote containers, Docker containers, Multipass VMs, and Vagrant boxes */}}
-{{ if or (env "CODESPACES") (env "REMOTE_CONTAINERS_IPC") (eq .chezmoi.username "root" "ubuntu" "vagrant" "vscode") }}
-{{   $ephemeral = true }}
-{{   $headless = true }}
-{{ end }}
-
-{{/* work around unreliable hostname on darwin */}}
-{{ $hostname := .chezmoi.hostname }}
+{{ $pkgmgr := "" }}
 {{ if eq .chezmoi.os "darwin" }}
-{{   $computerName := output "scutil" "--get" "ComputerName" | trim }}
-{{   $hostname = $computerName }}
-{{ end }}
-
-{{ if eq .chezmoi.os "windows" }}
-{{   $ephemeral = true }}
-{{ end }}
-
-{{ if not $ephemeral }}
-{{   $h := lower $hostname }}
-{{/* known personal/work machines, matched case-insensitively; add new hosts here */}}
-{{   $personalHosts := list "macbook neo" "black-laptop" "toaster" }}
-{{   $workHosts := list "work-laptop" }}
-{{   if or (contains "jippen" $h) (has $h $personalHosts) }}
-{{     $personal = true }}
-{{   else if has $h $workHosts }}
-{{     $work = true }}
-{{   else if stdinIsATTY }}
-{{     $headless = promptBoolOnce . "headless" "headless" }}
-{{     $ephemeral = promptBoolOnce . "ephemeral" "ephemeral" }}
-{{     $work = promptBoolOnce . "work" "work" }}
-{{   else }}
-{{     $headless = true }}
+{{   $pkgmgr = "brew" }}
+{{ else if eq .chezmoi.os "linux" }}
+{{   $id := .chezmoi.osRelease.id }}
+{{   $like := "" }}{{ if hasKey .chezmoi.osRelease "idLike" }}{{ $like = .chezmoi.osRelease.idLike }}{{ end }}
+{{   if or (has $id (list "fedora" "rhel" "centos" "rocky" "almalinux")) (contains "rhel" $like) (contains "fedora" $like) }}
+{{     $pkgmgr = "dnf" }}
+{{   else if or (has $id (list "debian" "ubuntu" "kali" "parrot" "raspbian" "linuxmint" "pop")) (contains "debian" $like) (contains "ubuntu" $like) }}
+{{     $pkgmgr = "apt" }}
 {{   end }}
 {{ end }}
 
-[data]
-{{ if $work }}
-    name = "workuser"
-    email = "workuser@company.com"
-{{ else if $personal }}
-    name = "jippen"
-    email = "user@legitemail.xyz"
+{{/* --- hostname (scutil on darwin for reliability) --- */}}
+{{ $hostname := .chezmoi.hostname }}
+{{ if eq .chezmoi.os "darwin" }}
+{{   $hostname = output "scutil" "--get" "ComputerName" | trim }}
 {{ end }}
+{{/* --- role: prompted per machine (interactive); vm on containers/headless --- */}}
+{{ $role := "" }}
+{{ if or (env "CODESPACES") (env "REMOTE_CONTAINERS_IPC") (eq .chezmoi.username "root" "ubuntu" "vagrant" "vscode") (eq .chezmoi.os "windows") }}
+{{   $role = "vm" }}
+{{ else if stdinIsATTY }}
+{{   $role = promptStringOnce . "role" "role (desktop|work|k8s|nas|server|vm)" "server" }}
+{{ else }}
+{{   $role = "vm" }}
+{{ end }}
+
+{{/* --- derived capabilities --- */}}
+{{ $gui := has $role (list "desktop" "work") }}
+{{ $trust := "personal" }}
+{{ if eq $role "work" }}{{ $trust = "work" }}{{ else if eq $role "vm" }}{{ $trust = "none" }}{{ end }}
+{{ $homelab := has $role (list "desktop" "k8s" "nas") }}
+{{ $ephemeral := eq $role "vm" }}
+{{ $headless := not $gui }}
+
+{{/* --- profiles: prompted per machine, with a menu. Keep this map in sync
+     with packages.yaml `profiles:` (config template can't read .chezmoidata). --- */}}
+{{ $profileDescs := dict
+     "dev"   "docker, gh, ripgrep, dev tooling"
+     "media" "VLC, Plex, mpv, HandBrake"
+     "ctf"   "nmap, john, arp-scan, ghidra, CTF stack"
+}}
+{{/* stored as a CSV string (profiles_csv) so it round-trips across re-inits;
+     parsed into a list below. To change profiles later, see README. */}}
+{{ $profilesCsv := "" }}
+{{ if hasKey . "profiles_csv" }}{{ $profilesCsv = .profiles_csv }}{{ end }}
+{{ if stdinIsATTY }}
+{{   $menu := "available profiles:" }}
+{{   range $k := (keys $profileDescs | sortAlpha) }}{{ $menu = printf "%s\n  %-7s %s" $menu $k (get $profileDescs $k) }}{{ end }}
+{{   $profilesCsv = promptString (printf "%s\nenable which (comma-separated, blank for none) [current: %s]" $menu $profilesCsv) $profilesCsv }}
+{{ end }}
+{{ $profiles := without (splitList "," (nospace $profilesCsv)) "" }}
+
+{{/* --- git identity: default prompted once per machine, but only when unset
+     (promptStringOnce treats an empty cached value as "answered", so guard on ""
+     to recover from a blank/headless first run); overrides are age-encrypted. --- */}}
+{{ $gitname := "" }}{{ $gitemail := "" }}
+{{ if hasKey . "gitname" }}{{ $gitname = .gitname }}{{ end }}
+{{ if hasKey . "gitemail" }}{{ $gitemail = .gitemail }}{{ end }}
+{{ if stdinIsATTY }}
+{{   if eq $gitname "" }}{{ $gitname = promptString "git author name" }}{{ end }}
+{{   if eq $gitemail "" }}{{ $gitemail = promptString "git author email" }}{{ end }}
+{{ end }}
+
+encryption = "age"
+
+[age]
+    identity = "~/.config/chezmoi/key.txt"
+    recipient = "age12lmj648fge6uex6gkp45wcsd5t0s3uhpkkr2wym7dlwlrzxqz57qhy7rsn"
+
+[data]
+    role = {{ $role | quote }}
+    gui = {{ $gui }}
+    trust = {{ $trust | quote }}
+    homelab = {{ $homelab }}
     ephemeral = {{ $ephemeral }}
     headless = {{ $headless }}
+    profiles = [{{ range $i, $p := $profiles }}{{ if $i }}, {{ end }}{{ $p | quote }}{{ end }}]
+    profiles_csv = {{ $profilesCsv | quote }}
     hostname = {{ $hostname | quote }}
-    personal = {{ $personal }}
-    work = {{ $work }}
     osid = {{ $osID | quote }}
+    pkgmgr = {{ $pkgmgr | quote }}
+    gitname = {{ $gitname | quote }}
+    gitemail = {{ $gitemail | quote }}
+{{/* back-compat aliases (derived from trust) — remove once all gates use caps */}}
+    personal = {{ eq $trust "personal" }}
+    work = {{ eq $trust "work" }}
 
 [onepassword]
     # Use the 1Password desktop app's existing session (biometric) instead of

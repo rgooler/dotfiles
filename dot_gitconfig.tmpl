@@ -1,0 +1,12 @@
+[user]
+	name = {{ .gitname }}
+	email = {{ .gitemail }}
+[init]
+	defaultBranch = main
+[pull]
+	rebase = true
+{{ if .personal }}
+; per-remote identity overrides (age-encrypted; patterns + identities stay private)
+[include]
+	path = ~/.config/git/overrides
+{{- end }}

@@ -8,6 +8,15 @@ fi
 
 export PATH="$HOME/.local/share/bin:$HOME/.local/bin:$HOME/.local/bin/update/bin:$HOME/bin:/usr/local/bin:$PATH"
 
+{{ if .gui }}
+export PATH="$PATH:$HOME/.lmstudio/bin"   # LM Studio CLI (desktop only)
+{{ end }}
+{{ if .homelab }}
+# homelab / kubernetes access
+export KUBECONFIG="$HOME/.kube/homelab.yaml"
+export SOPS_AGE_KEY_CMD="op read op://homelab/age_k8s-homelab/notesPlain"
+{{ end }}
+
 {{ if eq .osid "darwin" }}
 # Add Visual Studio Code (code)
 export PATH="$PATH:/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
@@ -84,8 +93,9 @@ eval "$(mise activate zsh)"
 
 # atuin: shell history (personal machines only). Up = prefix search, Ctrl-R = fuzzy search,
 # both against the synced db. Behavior tuned in ~/.config/atuin/config.toml.
-{{ if and .personal (lookPath "atuin") }}
-eval "$(atuin init zsh)"
+{{ if .personal }}
+# runtime check (atuin is mise-managed, so not on PATH at chezmoi-apply time)
+command -v atuin >/dev/null && eval "$(atuin init zsh)"
 {{ end }}
 
 {{ if eq .osid "darwin" }}

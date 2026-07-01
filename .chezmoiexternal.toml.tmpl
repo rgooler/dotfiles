@@ -1,10 +1,3 @@
-
-[".fonts"]
-    type = "git-repo"
-    url = "https://github.com/powerline/fonts.git"
-    refreshPeriod = "168h"
-
-
 ### oh-my-zsh
 [".oh-my-zsh"]
   type = "git-repo"
@@ -21,15 +14,5 @@
   url = "https://github.com/romkatv/powerlevel10k.git"
   exact = true
   refreshPeriod = "72h"
-{{/* macOS installs nerd fonts via brew casks (see packages.yaml); Linux has no
-     brew cask support, so fetch the archives directly there. */}}
-{{- if and (not .ephemeral) (not .headless) (eq .chezmoi.os "linux") }}
-{{-   range (list
-        "Meslo"
-        "Hack") }}
-[".local/share/fonts/{{ . }}"]
-    type = "archive"
-    url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{{ . }}.tar.xz"
-    refreshPeriod = "168h"
-{{-   end }}
-{{- end }}
+# Nerd fonts are installed via the OS package manager (baseline.gui in
+# packages.yaml), not fetched here.

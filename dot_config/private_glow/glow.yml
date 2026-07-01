@@ -1,0 +1,10 @@
+# style name or JSON path (default "auto")
+style: "auto"
+# mouse support (TUI-mode only)
+mouse: true
+# use pager to display markdown
+pager: true
+# word-wrap at width; 0 = track the full terminal width instead of the 80-col default
+width: 0
+# show all files, including hidden and ignored.
+all: false

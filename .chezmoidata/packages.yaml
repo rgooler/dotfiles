@@ -1,103 +1,135 @@
+# Package sets, installed in order by the package scripts:
+#   1. baseline.all   — every machine, every OS
+#   2. baseline.gui   — machines where .gui is true (desktop/work)
+#   3. profiles.<p>   — each bundle listed in .profiles (dev/media/ctf)
+# Dispatch is by .pkgmgr (dnf | apt | brew). Nerd fonts come via externals
+# (Linux) / brew casks (macOS), not from here. Repos for code/docker/gh/etc.
+# are configured in run_once_before_install-package-managers.sh.tmpl.
 packages:
-    core:
-        taps:
-        brews:
-        - 'age'
-        - 'binwalk'
-        - 'btop'
-        - 'chezmoi'
-        - 'coreutils'
-        - 'curl'
-        - 'git'
-        - 'grep'
-        - 'htop'
-        - 'jq'
-        - 'mise'
-        - 'nmap'
-        - 'sqlite'
-        - 'tree'
-        - 'vim'
-        - 'watch'
-        - 'wget'
-        - 'zoxide'
-        - 'zsh'
-        casks:
-        - 'db-browser-for-sqlite'
-    personal:
-        core:
-            taps:
-            brews:
-            - 'atuin'
-            - 'gnupg'
-            casks:
-            npm:
-            pip:
-        darwin:
-            taps:
-            brews:
-            - 'ripgrep'
-            - 'rsync'
-            - 'semgrep'
-            casks:
-            - 'google-chrome'
-            - 'signal'
-            - 'tailscale-app'
-            - 'visual-studio-code'
-            - 'vlc'
-        linux:
-            taps:
-            brews:
-            casks:
-            # Fedora desktop: vendor dnf repos are configured in
-            # run_onchange_install-linux-packages.sh.tmpl
-            dnf:
-            - 'sqlitebrowser'        # DB Browser for SQLite (Fedora repos)
-            - 'code'                 # VS Code (packages.microsoft.com)
-            - 'google-chrome-stable' # Chrome (dl.google.com)
-            - 'tailscale'            # Tailscale (pkgs.tailscale.com)
-            - '1password'            # 1Password desktop app (for SSH agent)
-            flatpak:
-            - 'org.signal.Signal'
-            - 'org.videolan.VLC'
-    work:
-        core:
-            taps:
-            brews:
-            casks:
-            npm:
-            pip:
-        darwin:
-            taps:
-            brews:
-            casks:
-        linux:
-            taps:
-            brews:
-            casks:
-    darwin:
-        taps:
-        - '1password/tap'
-        brews:
-        casks:
-        - '1password-cli'
-        - 'font-hack-nerd-font'
-        - 'font-meslo-lg-nerd-font'
-    linux:
-        # CLI tools via dnf (all Linux machines). Runtimes (node/go/python) come
-        # from mise; mise itself from mise.run; atuin via mise on personal boxes.
-        dnf:
-        - 'age'
-        - 'binwalk'
-        - 'btop'
-        - 'chezmoi'
-        - 'git'
-        - 'gnupg2'
-        - 'htop'
-        - 'jq'
-        - 'nmap'
-        - 'sqlite'
-        - 'tree'
-        - 'vim-enhanced'
-        - 'wget'
-        - 'zoxide'
-        - 'zsh'
+  baseline:
+    all:
+      dnf:
+      - 'age'
+      - 'binwalk'
+      - 'btop'
+      - 'chezmoi'
+      - 'git'
+      - 'glow'
+      - 'gnupg2'
+      - 'jq'
+      - 'mise'
+      - 'sqlite'
+      - 'tree'
+      - 'vim-enhanced'
+      - 'wget'
+      - 'zoxide'
+      - 'zsh'
+      apt:
+      - 'age'
+      - 'binwalk'
+      - 'btop'
+      - 'git'
+      - 'glow'            # requires charm apt repo (added in before-script)
+      - 'gnupg'
+      - 'jq'
+      - 'mise'            # requires mise apt repo (added in before-script)
+      - 'sqlite3'
+      - 'tree'
+      - 'vim'
+      - 'zoxide'
+      - 'zsh'
+      # chezmoi on apt: installed via get.chezmoi.io in before-script (not packaged)
+      brew:
+      - 'age'
+      - 'binwalk'
+      - 'btop'
+      - 'chezmoi'
+      - 'coreutils'
+      - 'curl'
+      - 'git'
+      - 'glow'
+      - 'gnupg'
+      - 'grep'
+      - 'jq'
+      - 'mise'
+      - 'sqlite'
+      - 'tree'
+      - 'vim'
+      - 'watch'
+      - 'wget'
+      - 'zoxide'
+      - 'zsh'
+    gui:
+      dnf:
+      - 'code'                    # VS Code (packages.microsoft.com)
+      - 'tailscale'               # Tailscale (pkgs.tailscale.com)
+      - '1password'               # 1Password desktop app (SSH agent)
+      - 'sqlitebrowser'           # DB Browser for SQLite
+      - 'cascadia-code-nf-fonts'  # Cascadia Code Nerd Font (p10k prompt)
+      apt:
+      - 'code'
+      - 'tailscale'
+      - '1password'
+      - 'sqlitebrowser'
+      - 'fonts-cascadia-code'     # Nerd glyphs in recent versions
+      brew: []
+      casks:                      # macOS GUI apps
+      - 'visual-studio-code'
+      - '1password'
+      - 'tailscale-app'
+      - 'db-browser-for-sqlite'
+      - 'font-caskaydia-cove-nerd-font'  # Cascadia Code Nerd Font
+      flatpak:
+      - 'org.signal.Signal'
+  profiles:
+    dev:
+      dnf:
+      - 'gh'                   # GitHub CLI (gh-cli repo)
+      - 'docker-ce'            # Docker Engine (docker-ce repo)
+      - 'docker-ce-cli'
+      - 'docker-buildx-plugin'
+      - 'docker-compose-plugin'
+      - 'docker-ce-rootless-extras'
+      - 'containerd.io'
+      apt:
+      - 'gh'
+      - 'docker-ce'
+      - 'docker-ce-cli'
+      - 'docker-buildx-plugin'
+      - 'docker-compose-plugin'
+      - 'docker-ce-rootless-extras'
+      - 'containerd.io'
+      brew:
+      - 'gh'
+      - 'ripgrep'
+      - 'rsync'
+      - 'semgrep'
+      casks:
+      - 'docker'
+      flatpak: []
+    media:
+      dnf: []
+      apt: []
+      brew: []
+      casks:
+      - 'vlc'
+      flatpak:
+      - 'org.videolan.VLC'
+      - 'tv.plex.PlexDesktop'
+      - 'io.mpv.Mpv'
+      - 'fr.handbrake.ghb'
+    ctf:
+      dnf:
+      - 'nmap'
+      - 'john'
+      - 'arp-scan'
+      apt:
+      - 'nmap'
+      - 'john'
+      - 'arp-scan'
+      brew:
+      - 'nmap'
+      - 'john'
+      casks: []
+      flatpak:
+      - 'org.ghidra_sre.Ghidra'

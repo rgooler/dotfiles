@@ -1,0 +1,125 @@
+#!/bin/bash
+# Install packages: baseline.all -> (gui) baseline.gui -> each enabled profile,
+# dispatched by .pkgmgr. Then mise-managed runtimes. Runs on change of the
+# package/profile/tool sets, AFTER dotfiles and AFTER the before-script.
+
+{{ template "utils" }}
+
+set -uo pipefail
+
+# Re-run when any of these change:
+# baseline: {{ .packages.baseline.all }}
+# gui:      {{ .packages.baseline.gui }}
+# enabled:  {{ .profiles }}
+# defs:     {{ .packages.profiles }}
+# tools:    {{ include "dot_tool-versions" | sha256sum }}
+
+{{ if eq .pkgmgr "brew" }}
+##############################################################################
+# macOS: Homebrew bundle (baseline + gui + profiles via the brew template)
+##############################################################################
+if exist brew; then
+    eval "$(brew shellenv)"
+    info "Installing brew packages..."
+{{ template "brew" . }}
+    if [ $? -eq 0 ]; then
+        success "Successfully installed brew packages."
+    else
+        fail "Some or all brew packages failed to install."
+    fi
+else
+    fail "Command 'brew' not found in PATH. Skipping brew packages."
+fi
+
+{{ else if eq .pkgmgr "dnf" }}
+##############################################################################
+# Fedora: dnf + flatpak
+##############################################################################
+DNF_PKGS="{{ range .packages.baseline.all.dnf }}{{ . }} {{ end }}{{ if .gui }}{{ range .packages.baseline.gui.dnf }}{{ . }} {{ end }}{{ end }}{{ range $p := .profiles }}{{ range (index $.packages.profiles $p).dnf }}{{ . }} {{ end }}{{ end }}"
+info "Installing dnf packages: $DNF_PKGS"
+if sudo dnf install -y $DNF_PKGS; then
+    success "dnf packages installed."
+else
+    fail "Some dnf packages failed to install."
+fi
+
+{{ if .gui }}
+FLATPAK_PKGS="{{ range .packages.baseline.gui.flatpak }}{{ . }} {{ end }}{{ range $p := .profiles }}{{ range (index $.packages.profiles $p).flatpak }}{{ . }} {{ end }}{{ end }}"
+if [ -n "${FLATPAK_PKGS// /}" ]; then
+    if ! exist flatpak; then sudo dnf install -y flatpak; fi
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    info "Installing flatpak apps: $FLATPAK_PKGS"
+    if flatpak install -y flathub $FLATPAK_PKGS; then
+        success "flatpak apps installed."
+    else
+        fail "Some flatpak apps failed to install."
+    fi
+fi
+{{ end }}
+
+{{ else if eq .pkgmgr "apt" }}
+##############################################################################
+# Debian/Ubuntu/Kali (UNTESTED)
+##############################################################################
+export DEBIAN_FRONTEND=noninteractive
+APT_PKGS="{{ range .packages.baseline.all.apt }}{{ . }} {{ end }}{{ if .gui }}{{ range .packages.baseline.gui.apt }}{{ . }} {{ end }}{{ end }}{{ range $p := .profiles }}{{ range (index $.packages.profiles $p).apt }}{{ . }} {{ end }}{{ end }}"
+sudo apt-get update -y
+info "Installing apt packages: $APT_PKGS"
+if sudo apt-get install -y $APT_PKGS; then
+    success "apt packages installed."
+else
+    fail "Some apt packages failed to install."
+fi
+
+{{ if .gui }}
+FLATPAK_PKGS="{{ range .packages.baseline.gui.flatpak }}{{ . }} {{ end }}{{ range $p := .profiles }}{{ range (index $.packages.profiles $p).flatpak }}{{ . }} {{ end }}{{ end }}"
+if [ -n "${FLATPAK_PKGS// /}" ]; then
+    if ! exist flatpak; then sudo apt-get install -y flatpak; fi
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    info "Installing flatpak apps: $FLATPAK_PKGS"
+    if flatpak install -y flathub $FLATPAK_PKGS; then
+        success "flatpak apps installed."
+    else
+        fail "Some flatpak apps failed to install."
+    fi
+fi
+{{ end }}
+{{ end }}
+
+##############################################################################
+# atuin — shell history, personal-trust machines only (installed via mise)
+##############################################################################
+{{ if eq .trust "personal" }}
+if exist mise; then
+    info "Installing atuin via mise..."
+    if mise use -g atuin@latest; then
+        success "atuin installed via mise."
+    else
+        fail "atuin (mise) install failed."
+    fi
+fi
+{{ end }}
+
+##############################################################################
+# mise runtimes (all OSes, from ~/.tool-versions)
+##############################################################################
+if ! exist mise; then
+{{ if eq .pkgmgr "brew" }}
+    if exist brew; then info "Installing mise via Homebrew..."; brew install mise; fi
+{{ else }}
+    info "Installing mise via mise.run installer..."
+    curl -fsSL https://mise.run | sh
+    export PATH="$HOME/.local/bin:$PATH"
+{{ end }}
+fi
+
+if exist mise; then
+    info "Installing tools with mise (from ~/.tool-versions)..."
+    if mise install; then
+        success "mise tools installed."
+    else
+        fail "mise install failed."
+    fi
+else
+    fail "mise not found in PATH; skipping tool install."
+fi

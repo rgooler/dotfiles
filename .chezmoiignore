@@ -1,5 +1,7 @@
 LICENSE
 README.md
+AGENTS.md
+CLAUDE.md
 docs/
 .pre-commit-config.yaml
 .sudo_as_admin_successful
@@ -25,7 +27,21 @@ AppData
 # repo-internal helper scripts invoked by chezmoi, not deployed to $HOME
 scripts
 
+{{ if eq .chezmoi.os "linux" }}
+# brew-update is a Homebrew helper — macOS only (Linux uses dnf/mise)
+.local/bin/brew-update
+{{ end }}
+
 {{ if not .personal }}
-# atuin is personal-machines-only
+# age-encrypted files — skipped where the age key isn't bootstrapped (vm/ephemeral)
 .config/atuin
+.config/git/overrides
+.config/git/id-*
+.ssh/config.d/hosts
+.ssh/authorized_keys
+{{ end }}
+
+{{ if not .homelab }}
+# kube homelab config only on homelab-capable machines (desktop/k8s/nas)
+.kube/homelab.yaml
 {{ end }}

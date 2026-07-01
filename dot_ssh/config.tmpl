@@ -2,14 +2,15 @@
 # GLOBAL
 ########################
 Host *
-  {{ if eq .osid "darwin" }}
+{{- if eq .osid "darwin" }}
   UseKeychain yes
-  # 1password ssh-agent
+  # 1Password ssh-agent
   IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
-  {{ else if eq .osid "linux" }}
+{{- else if eq .osid "linux" }}
   IdentityAgent ~/.1password/agent.sock
-  {{ end }}
-  
-{{ if .personal }}
-{{ onepasswordRead "op://Homelab/SSH Config/notesPlain" }}
-{{ end }}
+{{- end }}
+
+{{ if .personal -}}
+# host definitions live in an age-encrypted include (see config.d/)
+Include ~/.ssh/config.d/hosts
+{{ end -}}
