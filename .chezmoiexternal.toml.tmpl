@@ -21,17 +21,13 @@
   url = "https://github.com/romkatv/powerlevel10k.git"
   exact = true
   refreshPeriod = "72h"
-{{- if and (not .ephemeral) (not .headless) }}
-{{-   $fontDir := "" }}
-{{-   if eq .chezmoi.os "darwin" }}
-{{-     $fontDir = "Library/Fonts" }}
-{{-   else if eq .chezmoi.os "linux" }}
-{{-     $fontDir = ".local/share/fonts" }}
-{{-   end }}
+{{/* macOS installs nerd fonts via brew casks (see packages.yaml); Linux has no
+     brew cask support, so fetch the archives directly there. */}}
+{{- if and (not .ephemeral) (not .headless) (eq .chezmoi.os "linux") }}
 {{-   range (list
         "Meslo"
         "Hack") }}
-["{{ $fontDir }}/{{ . }}"]
+[".local/share/fonts/{{ . }}"]
     type = "archive"
     url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{{ . }}.tar.xz"
     refreshPeriod = "168h"

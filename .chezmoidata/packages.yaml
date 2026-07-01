@@ -1,8 +1,6 @@
 packages:
     core:
         taps:
-        - 'homebrew/bundle'
-        - 'homebrew/services'
         brews:
         - 'age'
         - 'btop'
@@ -78,6 +76,8 @@ packages:
         brews:
         casks:
         - '1password-cli'
+        - 'font-hack-nerd-font'
+        - 'font-meslo-lg-nerd-font'
     linux:
         taps:
         brews:
