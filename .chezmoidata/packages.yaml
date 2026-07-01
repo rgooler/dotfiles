@@ -3,6 +3,7 @@ packages:
         taps:
         brews:
         - 'age'
+        - 'binwalk'
         - 'btop'
         - 'chezmoi'
         - 'coreutils'
@@ -16,10 +17,12 @@ packages:
         - 'sqlite'
         - 'tree'
         - 'vim'
+        - 'watch'
         - 'wget'
         - 'zoxide'
         - 'zsh'
         casks:
+        - 'db-browser-for-sqlite'
     personal:
         core:
             taps:
@@ -48,6 +51,7 @@ packages:
             # Fedora desktop: vendor dnf repos are configured in
             # run_onchange_install-linux-packages.sh.tmpl
             dnf:
+            - 'sqlitebrowser'        # DB Browser for SQLite (Fedora repos)
             - 'code'                 # VS Code (packages.microsoft.com)
             - 'google-chrome-stable' # Chrome (dl.google.com)
             - 'tailscale'            # Tailscale (pkgs.tailscale.com)
@@ -83,6 +87,7 @@ packages:
         # from mise; mise itself from mise.run; atuin via mise on personal boxes.
         dnf:
         - 'age'
+        - 'binwalk'
         - 'btop'
         - 'chezmoi'
         - 'git'
