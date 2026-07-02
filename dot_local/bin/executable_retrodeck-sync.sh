@@ -40,6 +40,10 @@
 
 set -euo pipefail
 
+# A per-user rclone (the SteamOS/immutable fallback installs into ~/.local/bin)
+# must be found even under systemd's minimal PATH.
+export PATH="$HOME/.local/bin:$PATH"
+
 # ---- config -----------------------------------------------------------------
 RCLONE_REMOTE="${RCLONE_REMOTE:-garage}"
 BUCKET="${BUCKET:-retrodeck-saves}"

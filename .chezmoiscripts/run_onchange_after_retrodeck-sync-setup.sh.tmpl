@@ -9,12 +9,37 @@
 
 set -uo pipefail
 
+# ~/.local/bin holds the per-user rclone fallback (installed just below on
+# immutable systems); keep it on PATH.
+export PATH="$HOME/.local/bin:$PATH"
+
 # Re-run when the script or any unit changes:
 # script: {{ include "dot_local/bin/executable_retrodeck-sync.sh" | sha256sum }}
 # svc:    {{ include "dot_config/systemd/user/retrodeck-sync.service" | sha256sum }}
 # tsvc:   {{ include "dot_config/systemd/user/retrodeck-sync-timer.service" | sha256sum }}
 # timer:  {{ include "dot_config/systemd/user/retrodeck-sync.timer" | sha256sum }}
 # watch:  {{ include "dot_config/systemd/user/retrodeck-sync-watch.service" | sha256sum }}
+
+# Dependencies. rclone + inotifywait normally come from the emulation profile's
+# packages, but immutable SteamOS can't use the package manager — fall back to a
+# per-user rclone in ~/.local/bin (the script + units already have it on PATH).
+if ! command -v rclone >/dev/null 2>&1; then
+    info "retrodeck-sync: rclone not found — installing a per-user copy (SteamOS/immutable fallback)..."
+    if command -v unzip >/dev/null 2>&1; then
+        mkdir -p "$HOME/.local/bin"; _t=$(mktemp -d)
+        if curl -fsSL https://downloads.rclone.org/rclone-current-linux-amd64.zip -o "$_t/r.zip" \
+           && unzip -j "$_t/r.zip" '*/rclone' -d "$HOME/.local/bin" >/dev/null; then
+            chmod +x "$HOME/.local/bin/rclone"; success "rclone installed to ~/.local/bin."
+        else
+            fail "rclone download failed — sync won't run until rclone is on PATH."
+        fi
+        rm -rf "$_t"
+    else
+        fail "rclone missing and 'unzip' unavailable — install rclone manually."
+    fi
+fi
+command -v inotifywait >/dev/null 2>&1 || \
+    info "NOTE: inotifywait (inotify-tools) missing — the recursive watcher needs it; the ~15m timer still works without it."
 
 info "retrodeck-sync: reloading systemd user units..."
 systemctl --user daemon-reload
