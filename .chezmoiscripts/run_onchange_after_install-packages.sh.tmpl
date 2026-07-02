@@ -49,7 +49,24 @@ if [ -n "${FLATPAK_PKGS// /}" ]; then
     if ! exist flatpak; then sudo dnf install -y flatpak; fi
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     info "Installing flatpak apps: $FLATPAK_PKGS"
-    if flatpak install -y flathub $FLATPAK_PKGS; then
+    # Install per-app so one failure can't abort the batch, and skip anything
+    # already installed from any remote. Entries may be "remote:appid" to pin a
+    # remote (e.g. fedora:io.mpv.Mpv — the flathub build had issues); a bare id
+    # defaults to flathub.
+    fp_fail=0
+    for spec in $FLATPAK_PKGS; do
+        remote=flathub; app=$spec
+        case "$spec" in *:*) remote=${spec%%:*}; app=${spec#*:};; esac
+        if flatpak info "$app" >/dev/null 2>&1; then
+            info "Skipping $app (already installed)"
+            continue
+        fi
+        if ! flatpak install -y "$remote" "$app"; then
+            fail "flatpak: failed to install $app from $remote"
+            fp_fail=1
+        fi
+    done
+    if [ "$fp_fail" -eq 0 ]; then
         success "flatpak apps installed."
     else
         fail "Some flatpak apps failed to install."
@@ -77,7 +94,23 @@ if [ -n "${FLATPAK_PKGS// /}" ]; then
     if ! exist flatpak; then sudo apt-get install -y flatpak; fi
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     info "Installing flatpak apps: $FLATPAK_PKGS"
-    if flatpak install -y flathub $FLATPAK_PKGS; then
+    # Install per-app so one failure can't abort the batch, and skip anything
+    # already installed from any remote. Entries may be "remote:appid" to pin a
+    # remote; a bare id defaults to flathub.
+    fp_fail=0
+    for spec in $FLATPAK_PKGS; do
+        remote=flathub; app=$spec
+        case "$spec" in *:*) remote=${spec%%:*}; app=${spec#*:};; esac
+        if flatpak info "$app" >/dev/null 2>&1; then
+            info "Skipping $app (already installed)"
+            continue
+        fi
+        if ! flatpak install -y "$remote" "$app"; then
+            fail "flatpak: failed to install $app from $remote"
+            fp_fail=1
+        fi
+    done
+    if [ "$fp_fail" -eq 0 ]; then
         success "flatpak apps installed."
     else
         fail "Some flatpak apps failed to install."

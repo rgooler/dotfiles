@@ -119,7 +119,7 @@ packages:
       flatpak:
       - 'org.videolan.VLC'
       - 'tv.plex.PlexDesktop'
-      - 'io.mpv.Mpv'
+      - 'fedora:io.mpv.Mpv'   # flathub build had issues; use the fedora remote
       - 'fr.handbrake.ghb'
     ctf:
       dnf:
