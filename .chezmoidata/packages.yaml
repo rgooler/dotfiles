@@ -18,6 +18,7 @@ packages:
       - 'gnupg2'
       - 'jq'
       - 'mise'
+      - 'rclone'
       - 'sqlite'
       - 'tree'
       - 'vim-enhanced'
@@ -33,6 +34,7 @@ packages:
       - 'gnupg'
       - 'jq'
       - 'mise'            # requires mise apt repo (added in before-script)
+      - 'rclone'
       - 'sqlite3'
       - 'tree'
       - 'vim'
@@ -52,6 +54,7 @@ packages:
       - 'grep'
       - 'jq'
       - 'mise'
+      - 'rclone'
       - 'sqlite'
       - 'tree'
       - 'vim'
