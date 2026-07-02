@@ -20,6 +20,9 @@ export PATH="$HOME/.local/bin:$PATH"
 # timer:  {{ include "dot_config/systemd/user/retrodeck-sync.timer" | sha256sum }}
 # watch:  {{ include "dot_config/systemd/user/retrodeck-sync-watch.service" | sha256sum }}
 # resume: {{ include "dot_config/systemd/user/retrodeck-sync-resume.service" | sha256sum }}
+# backup: {{ include "dot_local/bin/executable_retrodeck-backup.sh" | sha256sum }}
+# bksvc:  {{ include "dot_config/systemd/user/retrodeck-backup.service" | sha256sum }}
+# bktmr:  {{ include "dot_config/systemd/user/retrodeck-backup.timer" | sha256sum }}
 
 # Dependencies. rclone + inotifywait normally come from the emulation profile's
 # packages, but immutable SteamOS can't use the package manager — fall back to a
@@ -64,6 +67,29 @@ if ! command -v inotifywait >/dev/null 2>&1; then
         fail "tar with --zstd unavailable — cannot unpack inotify-tools; watcher off (timer still syncs)."
     fi
 fi
+# restic powers the snapshot backups (rollback). Normally from the emulation
+# profile's packages; on immutable SteamOS fall back to the single static binary
+# from GitHub into ~/.local/bin. Non-fatal — sync/backups degrade independently.
+if ! command -v restic >/dev/null 2>&1; then
+    info "retrodeck-sync: restic not found — installing a per-user copy from GitHub..."
+    if command -v bunzip2 >/dev/null 2>&1; then
+        _rs=$(mktemp -d)
+        _rsurl=$(curl -fsSL https://api.github.com/repos/restic/restic/releases/latest 2>/dev/null \
+                 | grep -oE 'https://[^"]*restic_[0-9.]+_linux_amd64\.bz2' | head -1)
+        if [ -n "$_rsurl" ] && curl -fsSL "$_rsurl" -o "$_rs/restic.bz2" && bunzip2 -f "$_rs/restic.bz2"; then
+            mkdir -p "$HOME/.local/bin"; install -m755 "$_rs/restic" "$HOME/.local/bin/restic"
+            hash -r 2>/dev/null || true
+            command -v restic >/dev/null 2>&1 \
+                && success "restic installed to ~/.local/bin." \
+                || fail "restic installed but not detected — snapshot backups off."
+        else
+            fail "restic download failed — snapshot backups off (sync still works)."
+        fi
+        rm -rf "$_rs"
+    else
+        fail "bunzip2 unavailable — cannot install restic; snapshot backups off."
+    fi
+fi
 
 info "retrodeck-sync: reloading systemd user units..."
 systemctl --user daemon-reload
@@ -100,6 +126,20 @@ if command -v gdbus >/dev/null 2>&1; then
 else
     systemctl --user disable --now retrodeck-sync-resume.service >/dev/null 2>&1 || true
     info "retrodeck-sync: gdbus missing — resume-on-wake trigger left off (timer still syncs)."
+fi
+
+# Snapshot backups (rollback). Need restic + the restic password (age-decrypted
+# to ~/.config/retrodeck-sync/restic-password on personal machines). The first
+# timer run initializes the restic repo.
+if command -v restic >/dev/null 2>&1 && [ -r "$HOME/.config/retrodeck-sync/restic-password" ]; then
+    if systemctl --user enable --now retrodeck-backup.timer; then
+        success "retrodeck-backup.timer enabled (restic snapshots, keep-last 20)."
+    else
+        fail "Could not enable retrodeck-backup.timer."
+    fi
+else
+    systemctl --user disable --now retrodeck-backup.timer >/dev/null 2>&1 || true
+    info "retrodeck-sync: restic or its password missing — snapshot backups off."
 fi
 
 # Lingering lets the timer/watcher run while logged out and survive reboot.

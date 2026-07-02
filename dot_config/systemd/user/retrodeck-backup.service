@@ -1,0 +1,23 @@
+# systemd USER oneshot: take a restic snapshot of the RetroDECK saves/states.
+# Invoked by retrodeck-backup.timer (~30m). Safe to run on demand too:
+#   systemctl --user start retrodeck-backup.service
+# Install to ~/.config/systemd/user/retrodeck-backup.service
+#
+# Needs restic + rclone (with the 'garage' remote) and the restic password at
+# ~/.config/retrodeck-sync/restic-password. flock in the script coalesces runs.
+[Unit]
+Description=RetroDECK save snapshot (restic to garage)
+Documentation=https://gitlab/-/blob/main/docs/steamdeck-saves.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/retrodeck-backup.sh
+TimeoutStartSec=30min
+Nice=15
+IOSchedulingClass=idle
+# Override retention/repo without editing the script:
+# Environment=KEEP_LAST=20
+# Environment=KEEP_DAILY=7
+# Environment=RESTIC_REPOSITORY=rclone:garage:retrodeck-saves/restic

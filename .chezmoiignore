@@ -50,9 +50,13 @@ scripts
 {{ if not (has "emulation" .profiles) }}
 # RetroDECK save-sync kit — only on machines with the `emulation` profile
 .local/bin/retrodeck-sync.sh
+.local/bin/retrodeck-backup.sh
+.config/retrodeck-sync/restic-password
 .config/systemd/user/retrodeck-sync.service
 .config/systemd/user/retrodeck-sync-timer.service
 .config/systemd/user/retrodeck-sync.timer
 .config/systemd/user/retrodeck-sync-watch.service
 .config/systemd/user/retrodeck-sync-resume.service
+.config/systemd/user/retrodeck-backup.service
+.config/systemd/user/retrodeck-backup.timer
 {{ end }}

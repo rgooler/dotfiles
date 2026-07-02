@@ -1,0 +1,19 @@
+# systemd USER timer: take a restic snapshot every ~30 min, so you can roll back
+# to a recent save if one gets corrupted. Retention (keep-last 20, keep-daily 7)
+# is applied by the script after each snapshot.
+# Install to ~/.config/systemd/user/retrodeck-backup.timer
+[Unit]
+Description=RetroDECK save snapshot timer (every ~30m)
+
+[Timer]
+# First snapshot 5 min after boot/login, then every 30 min. Randomized so
+# multiple devices don't hit garage in lockstep.
+OnBootSec=5min
+OnUnitActiveSec=30min
+RandomizedDelaySec=120
+# Catch up a missed snapshot after the machine was suspended/off.
+Persistent=true
+Unit=retrodeck-backup.service
+
+[Install]
+WantedBy=timers.target
