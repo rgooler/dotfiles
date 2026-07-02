@@ -112,5 +112,13 @@ else
     info "NOTE: run 'sudo loginctl enable-linger $USER' so syncs run while logged out."
 fi
 
-info "retrodeck-sync ready. First run establishes the (empty) baseline — kick it with '~/.local/bin/retrodeck-sync.sh'."
+# Only nudge about the first run while the bisync baseline hasn't been set up
+# yet (the sync script writes a <pair>.initialized sentinel per pair on first
+# success). Once both exist, just confirm readiness without the stale hint.
+_rd_state="${XDG_STATE_HOME:-$HOME/.local/state}/retrodeck-sync"
+if [ -e "$_rd_state/saves.initialized" ] && [ -e "$_rd_state/states.initialized" ]; then
+    success "retrodeck-sync ready."
+else
+    info "retrodeck-sync ready. First run establishes the (empty) baseline — kick it with '~/.local/bin/retrodeck-sync.sh'."
+fi
 {{ end -}}
