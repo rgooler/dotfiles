@@ -44,11 +44,25 @@ command -v inotifywait >/dev/null 2>&1 || \
 info "retrodeck-sync: reloading systemd user units..."
 systemctl --user daemon-reload
 
-info "retrodeck-sync: enabling safety-net timer + recursive watcher..."
-if systemctl --user enable --now retrodeck-sync.timer retrodeck-sync-watch.service; then
-    success "retrodeck-sync units enabled."
+info "retrodeck-sync: enabling safety-net timer..."
+if systemctl --user enable --now retrodeck-sync.timer; then
+    success "retrodeck-sync.timer enabled."
 else
-    fail "Could not enable retrodeck-sync units (is the user systemd bus up?)."
+    fail "Could not enable retrodeck-sync.timer (is the user systemd bus up?)."
+fi
+
+# The recursive watcher needs inotifywait; without it its --watch mode exits 1
+# and (Restart=on-failure) crash-loops. Enable it only when inotifywait exists
+# (e.g. not on stock SteamOS); otherwise make sure it's off and lean on the timer.
+if command -v inotifywait >/dev/null 2>&1; then
+    if systemctl --user enable --now retrodeck-sync-watch.service; then
+        success "retrodeck-sync-watch enabled (real-time sync)."
+    else
+        fail "Could not enable retrodeck-sync-watch."
+    fi
+else
+    systemctl --user disable --now retrodeck-sync-watch.service >/dev/null 2>&1 || true
+    info "retrodeck-sync: inotifywait missing — watcher left disabled; the ~15m timer handles sync."
 fi
 
 # Lingering lets the timer/watcher run while logged out and survive reboot.
