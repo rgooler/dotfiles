@@ -24,6 +24,10 @@
 #                                 #   and fire a debounced sync on any change.
 #                                 #   This is what retrodeck-sync-watch.service
 #                                 #   runs. Needs the 'inotify-tools' package.
+#   retrodeck-sync.sh --resume-watch # listen for resume-from-sleep (logind
+#                                 #   PrepareForSleep) and pull on wake. This is
+#                                 #   what retrodeck-sync-resume.service runs.
+#                                 #   Needs 'gdbus' (glib2); no inotify needed.
 #   retrodeck-sync.sh --resync   # force a --resync on the NEXT run of each pair
 #                                 #   (deletes the sentinels, then re-establishes
 #                                 #    the bisync baseline; use to recover)
@@ -63,6 +67,7 @@ LOCK_FILE="${STATE_DIR}/retrodeck-sync.lock"
 # ---- arg parsing ------------------------------------------------------------
 TIMER_RUN="false"   # --timer: this run came from the safety-net timer
 WATCH="false"       # --watch: run the recursive inotify watcher, not a sync
+RESUME_WATCH="false" # --resume-watch: pull on resume-from-sleep, not a sync
 FORCE_RESYNC="false"
 DRY_RUN=()          # array so it expands to nothing when unset
 
@@ -76,6 +81,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --timer)   TIMER_RUN="true" ;;
     --watch)   WATCH="true" ;;
+    --resume-watch) RESUME_WATCH="true" ;;
     --resync)  FORCE_RESYNC="true" ;;
     --dry-run) DRY_RUN=(--dry-run) ;;
     -h|--help) usage; exit 0 ;;
@@ -133,8 +139,36 @@ run_watch() {
   done
 }
 
+# ---- resume-watch mode ------------------------------------------------------
+# Listen for logind's PrepareForSleep(false) signal — the system just resumed
+# from suspend — and fire a sync. On a Steam Deck (suspended most of the time)
+# this pulls saves made elsewhere the moment you wake it on wifi, instead of
+# waiting out the ~15m safety-net timer. retrodeck-sync-resume.service runs this.
+# Needs gdbus (glib2); no inotify dependency, so it also gives resume-pulls where
+# the recursive watcher isn't available.
+run_resume_watch() {
+  command -v gdbus >/dev/null 2>&1 || {
+    log "ERROR: --resume-watch needs gdbus (glib2)"; exit 1; }
+  log "resume-watch: waiting for resume (logind PrepareForSleep) to trigger a pull"
+  gdbus monitor --system --dest org.freedesktop.login1 \
+        --object-path /org/freedesktop/login1 2>/dev/null \
+    | while read -r line; do
+        # PrepareForSleep(true)=going to sleep, (false)=resumed. Fire on resume.
+        case "$line" in
+          *PrepareForSleep*false*)
+            log "resume-watch: system resumed — triggering sync"
+            "$0" --timer >/dev/null 2>&1 || true ;;
+        esac
+      done
+}
+
 if [[ "$WATCH" == "true" ]]; then
   run_watch
+  exit 0
+fi
+
+if [[ "$RESUME_WATCH" == "true" ]]; then
+  run_resume_watch
   exit 0
 fi
 

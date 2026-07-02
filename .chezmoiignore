@@ -54,4 +54,5 @@ scripts
 .config/systemd/user/retrodeck-sync-timer.service
 .config/systemd/user/retrodeck-sync.timer
 .config/systemd/user/retrodeck-sync-watch.service
+.config/systemd/user/retrodeck-sync-resume.service
 {{ end }}

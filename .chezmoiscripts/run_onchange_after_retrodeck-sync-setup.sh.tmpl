@@ -19,6 +19,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # tsvc:   {{ include "dot_config/systemd/user/retrodeck-sync-timer.service" | sha256sum }}
 # timer:  {{ include "dot_config/systemd/user/retrodeck-sync.timer" | sha256sum }}
 # watch:  {{ include "dot_config/systemd/user/retrodeck-sync-watch.service" | sha256sum }}
+# resume: {{ include "dot_config/systemd/user/retrodeck-sync-resume.service" | sha256sum }}
 
 # Dependencies. rclone + inotifywait normally come from the emulation profile's
 # packages, but immutable SteamOS can't use the package manager — fall back to a
@@ -86,6 +87,19 @@ if command -v inotifywait >/dev/null 2>&1; then
 else
     systemctl --user disable --now retrodeck-sync-watch.service >/dev/null 2>&1 || true
     info "retrodeck-sync: inotifywait missing — watcher left disabled; the ~15m timer handles sync."
+fi
+
+# Resume-from-sleep pull trigger (needs gdbus/glib2; no inotify dependency, so
+# it works even where the recursive watcher can't).
+if command -v gdbus >/dev/null 2>&1; then
+    if systemctl --user enable --now retrodeck-sync-resume.service; then
+        success "retrodeck-sync-resume enabled (pull on wake)."
+    else
+        fail "Could not enable retrodeck-sync-resume."
+    fi
+else
+    systemctl --user disable --now retrodeck-sync-resume.service >/dev/null 2>&1 || true
+    info "retrodeck-sync: gdbus missing — resume-on-wake trigger left off (timer still syncs)."
 fi
 
 # Lingering lets the timer/watcher run while logged out and survive reboot.

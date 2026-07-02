@@ -1,0 +1,26 @@
+# systemd USER service: pull saves on resume-from-sleep. Runs the sync script's
+# --resume-watch mode, which listens for logind's PrepareForSleep signal and
+# fires a sync when the system wakes — so a Deck picks up changes made elsewhere
+# the moment you resume it on wifi, instead of waiting for the ~15m timer.
+# Install to ~/.config/systemd/user/retrodeck-sync-resume.service then:
+#   systemctl --user enable --now retrodeck-sync-resume.service
+#
+# Needs gdbus (glib2). No inotify dependency, so this works even where the
+# recursive watcher (inotify-tools) isn't available.
+[Unit]
+Description=RetroDECK save-sync resume-from-sleep trigger
+Documentation=https://gitlab/-/blob/main/docs/steamdeck-saves.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/retrodeck-sync.sh --resume-watch
+# Long-lived listener: restart if gdbus/the bus connection drops.
+Restart=on-failure
+RestartSec=30
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=default.target
