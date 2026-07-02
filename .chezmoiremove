@@ -15,7 +15,6 @@ Brewfile*
 .hushlogin
 .lesshst
 .nvm/
-.npm/
 .profile
 .pulse/
 .python*
