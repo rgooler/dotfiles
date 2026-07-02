@@ -41,8 +41,10 @@
 set -euo pipefail
 
 # A per-user rclone (the SteamOS/immutable fallback installs into ~/.local/bin)
-# must be found even under systemd's minimal PATH.
+# must be found even under systemd's minimal PATH; ~/.local/lib holds the
+# per-user libinotifytools for the bundled inotifywait on the same systems.
 export PATH="$HOME/.local/bin:$PATH"
+export LD_LIBRARY_PATH="$HOME/.local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 # ---- config -----------------------------------------------------------------
 RCLONE_REMOTE="${RCLONE_REMOTE:-garage}"
@@ -186,12 +188,14 @@ sync_pair() {
     log "WARN: local dir '${local_dir}' for pair '${name}' does not exist yet; creating it"
     mkdir -p "$local_dir"
   fi
-  # rclone bisync aborts with "empty prior listing" as a data-loss guard when a
-  # side is empty. A fresh, save-less device (no games played yet) would hit
-  # this on every run after the first. Keep a tiny placeholder so the baseline
-  # is never empty; it syncs harmlessly, and genuine emptiness protection stays
-  # intact for dirs that actually held saves.
+  # Placeholder so bisync never sees an empty listing (its "empty prior listing"
+  # data-loss guard, which a save-less device would hit every run). It must be
+  # byte- AND time-identical on every device: empty, with a pinned mtime. A pair
+  # holding ONLY .keep otherwise trips bisync's separate "all files changed"
+  # guard the moment another device uploads its own .keep with a newer mtime.
+  # Once real saves exist the pair has >1 file and .keep stays inert.
   [[ -e "$local_dir/.keep" ]] || : > "$local_dir/.keep"
+  touch -d @946684800 "$local_dir/.keep" 2>/dev/null || true  # 2000-01-01Z, fixed
   mkdir -p "$workdir"
 
   # First run for this pair: --resync establishes the baseline (makes both

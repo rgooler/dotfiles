@@ -38,8 +38,31 @@ if ! command -v rclone >/dev/null 2>&1; then
         fail "rclone missing and 'unzip' unavailable — install rclone manually."
     fi
 fi
-command -v inotifywait >/dev/null 2>&1 || \
-    info "NOTE: inotifywait (inotify-tools) missing — the recursive watcher needs it; the ~15m timer still works without it."
+# inotifywait powers the real-time watcher. On stock SteamOS it's absent and the
+# root is immutable, so install a per-user copy by extracting the Arch package
+# into ~/.local (bin + lib; the script exports LD_LIBRARY_PATH so it resolves).
+# Any failure here is non-fatal — the ~15m timer still syncs.
+if ! command -v inotifywait >/dev/null 2>&1; then
+    info "retrodeck-sync: inotifywait missing — installing a per-user inotify-tools from the Arch package..."
+    if command -v tar >/dev/null 2>&1 && tar --help 2>/dev/null | grep -q -- --zstd; then
+        _it=$(mktemp -d)
+        if curl -fsSL "https://archlinux.org/packages/extra/x86_64/inotify-tools/download/" -o "$_it/it.pkg.tar.zst" \
+           && tar -C "$_it" --zstd -xf "$_it/it.pkg.tar.zst" usr/bin/inotifywait usr/lib >/dev/null 2>&1; then
+            mkdir -p "$HOME/.local/bin" "$HOME/.local/lib"
+            install -m755 "$_it/usr/bin/inotifywait" "$HOME/.local/bin/inotifywait"
+            cp -Pf "$_it"/usr/lib/libinotifytools.so* "$HOME/.local/lib/" 2>/dev/null
+            hash -r 2>/dev/null || true
+            command -v inotifywait >/dev/null 2>&1 \
+                && success "inotify-tools installed to ~/.local (bin+lib)." \
+                || fail "inotifywait installed but not detected — watcher stays off (timer still syncs)."
+        else
+            fail "inotify-tools download/extract failed — watcher off (timer still syncs)."
+        fi
+        rm -rf "$_it"
+    else
+        fail "tar with --zstd unavailable — cannot unpack inotify-tools; watcher off (timer still syncs)."
+    fi
+fi
 
 info "retrodeck-sync: reloading systemd user units..."
 systemctl --user daemon-reload
