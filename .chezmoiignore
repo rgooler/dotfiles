@@ -37,6 +37,7 @@ scripts
 .config/atuin
 .config/git/overrides
 .config/git/id-*
+.config/rclone/rclone.conf
 .ssh/config.d/hosts
 .ssh/authorized_keys
 {{ end }}
