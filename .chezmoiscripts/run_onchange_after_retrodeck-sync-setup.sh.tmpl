@@ -1,0 +1,40 @@
+#!/bin/bash
+# Enable the RetroDECK save-sync systemd user units + user lingering. Runs after
+# packages and the unit/script files are applied, and re-runs whenever any of
+# them change. Gated to the `emulation` profile (see .chezmoiignore for the
+# matching file gate). Named to sort AFTER run_onchange_after_install-packages
+# so rclone/inotify-tools/RetroDECK exist before we enable the units.
+{{ if and (has "emulation" .profiles) (eq .chezmoi.os "linux") -}}
+{{ template "utils" }}
+
+set -uo pipefail
+
+# Re-run when the script or any unit changes:
+# script: {{ include "dot_local/bin/executable_retrodeck-sync.sh" | sha256sum }}
+# svc:    {{ include "dot_config/systemd/user/retrodeck-sync.service" | sha256sum }}
+# tsvc:   {{ include "dot_config/systemd/user/retrodeck-sync-timer.service" | sha256sum }}
+# timer:  {{ include "dot_config/systemd/user/retrodeck-sync.timer" | sha256sum }}
+# watch:  {{ include "dot_config/systemd/user/retrodeck-sync-watch.service" | sha256sum }}
+
+info "retrodeck-sync: reloading systemd user units..."
+systemctl --user daemon-reload
+
+info "retrodeck-sync: enabling safety-net timer + recursive watcher..."
+if systemctl --user enable --now retrodeck-sync.timer retrodeck-sync-watch.service; then
+    success "retrodeck-sync units enabled."
+else
+    fail "Could not enable retrodeck-sync units (is the user systemd bus up?)."
+fi
+
+# Lingering lets the timer/watcher run while logged out and survive reboot.
+# Needs sudo once; never fail the whole apply if we can't get it here.
+if [ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" = "yes" ]; then
+    success "retrodeck-sync: user lingering already enabled."
+elif sudo -n loginctl enable-linger "$USER" 2>/dev/null; then
+    success "retrodeck-sync: user lingering enabled."
+else
+    info "NOTE: run 'sudo loginctl enable-linger $USER' so syncs run while logged out."
+fi
+
+info "retrodeck-sync ready. First run establishes the (empty) baseline — kick it with '~/.local/bin/retrodeck-sync.sh'."
+{{ end -}}

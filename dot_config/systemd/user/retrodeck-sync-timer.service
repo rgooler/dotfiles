@@ -1,0 +1,21 @@
+# systemd USER oneshot invoked ONLY by retrodeck-sync.timer.
+# Install to ~/.config/systemd/user/retrodeck-sync-timer.service
+#
+# Identical to retrodeck-sync.service except it passes --timer so the script
+# skips its debounce settle (timer runs are already spaced out). Kept as a
+# separate unit so the folder-watch path can keep the debounce while the timer
+# does not. flock in the script still coalesces if the two ever overlap.
+[Unit]
+Description=RetroDECK save-sync (timer-initiated, no debounce)
+Documentation=https://gitlab/-/blob/main/docs/steamdeck-saves.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/retrodeck-sync.sh --timer
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=idle
+# Environment=BUCKET=retrodeck-saves
+# Environment=RCLONE_REMOTE=garage

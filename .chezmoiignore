@@ -46,3 +46,12 @@ scripts
 # kube homelab config only on homelab-capable machines (desktop/k8s/nas)
 .kube/homelab.yaml
 {{ end }}
+
+{{ if not (has "emulation" .profiles) }}
+# RetroDECK save-sync kit — only on machines with the `emulation` profile
+.local/bin/retrodeck-sync.sh
+.config/systemd/user/retrodeck-sync.service
+.config/systemd/user/retrodeck-sync-timer.service
+.config/systemd/user/retrodeck-sync.timer
+.config/systemd/user/retrodeck-sync-watch.service
+{{ end }}

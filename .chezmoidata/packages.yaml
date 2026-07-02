@@ -136,3 +136,14 @@ packages:
       casks: []
       flatpak:
       - 'org.ghidra_sre.Ghidra'
+    emulation:
+      # rclone is in baseline.all; flock ships with util-linux. inotify-tools
+      # provides inotifywait for the recursive save-watcher.
+      dnf:
+      - 'inotify-tools'
+      apt:
+      - 'inotify-tools'
+      brew: []
+      casks: []
+      flatpak:
+      - 'net.retrodeck.retrodeck'

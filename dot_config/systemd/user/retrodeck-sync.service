@@ -1,0 +1,28 @@
+# systemd USER oneshot that runs the RetroDECK save-sync once.
+# Install to ~/.config/systemd/user/retrodeck-sync.service
+#
+# Triggered indirectly by retrodeck-sync-watch.service (recursive inotify
+# watcher, which calls the script with --timer) and by retrodeck-sync.timer
+# (~15m safety net, via retrodeck-sync-timer.service). It can also be run on
+# demand: `systemctl --user start retrodeck-sync.service`. flock inside the
+# script coalesces overlapping runs.
+[Unit]
+Description=RetroDECK save-sync (rclone bisync to garage S3)
+Documentation=https://gitlab/-/blob/main/docs/steamdeck-saves.md
+# Don't bother if the network is down; the timer/watcher will retry later.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# %h expands to the user's home. Adjust the path if you installed the script
+# somewhere other than ~/bin.
+ExecStart=%h/.local/bin/retrodeck-sync.sh
+# Tailscale/garage can be slow to answer over a subnet route; give it room but
+# never hang forever. The script's own rclone --timeout is the finer bound.
+TimeoutStartSec=30min
+Nice=10
+IOSchedulingClass=idle
+# Uncomment / edit to override script defaults without touching the script:
+# Environment=BUCKET=retrodeck-saves
+# Environment=RCLONE_REMOTE=garage

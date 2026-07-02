@@ -3,7 +3,7 @@
 
        roles:    desktop | work | k8s | nas | server | vm
        derived:  gui, trust (personal|work|none), homelab, ephemeral, headless
-       profiles: opt-in package bundles (dev, media, ctf)
+       profiles: opt-in package bundles (dev, media, ctf, emulation)
 
      Gate on the derived CAPABILITY that matches intent, never on the role name:
        desktop apps -> {{ "{{ if .gui }}" }}
@@ -53,9 +53,10 @@
 {{/* --- profiles: prompted per machine, with a menu. Keep this map in sync
      with packages.yaml `profiles:` (config template can't read .chezmoidata). --- */}}
 {{ $profileDescs := dict
-     "dev"   "docker, gh, ripgrep, dev tooling"
-     "media" "VLC, Plex, mpv, HandBrake"
-     "ctf"   "nmap, john, arp-scan, ghidra, CTF stack"
+     "dev"       "docker, gh, ripgrep, dev tooling"
+     "media"     "VLC, Plex, mpv, HandBrake"
+     "ctf"       "nmap, john, arp-scan, ghidra, CTF stack"
+     "emulation" "RetroDECK + garage S3 save-sync"
 }}
 {{/* stored as a CSV string (profiles_csv) so it round-trips across re-inits;
      parsed into a list below. To change profiles later, see README. */}}

@@ -1,0 +1,33 @@
+# systemd USER service: recursive inotify watcher that triggers a sync whenever
+# any RetroDECK save changes — at any depth (unlike a systemd .path unit, which
+# is NOT recursive). This REPLACES the old retrodeck-sync.path.
+# Install to ~/.config/systemd/user/retrodeck-sync-watch.service then:
+#   systemctl --user enable --now retrodeck-sync-watch.service
+#
+# Requires the 'inotify-tools' package (provides inotifywait). The script
+# debounces internally, then starts a normal, flock-guarded sync run; the
+# ~15m retrodeck-sync.timer remains as a safety net for anything missed
+# (e.g. changes made while this device was suspended/off).
+[Unit]
+Description=RetroDECK save-sync recursive inotify watcher
+Documentation=https://gitlab/-/blob/main/docs/steamdeck-saves.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+# %h expands to the user's home. Adjust if you installed the script elsewhere.
+ExecStart=%h/.local/bin/retrodeck-sync.sh --watch
+# Long-lived watcher: restart it if inotifywait dies or a watched dir isn't
+# there yet (e.g. RetroDECK not installed at first boot).
+Restart=on-failure
+RestartSec=30
+Nice=10
+IOSchedulingClass=idle
+# Override script defaults without editing the script:
+# Environment=BUCKET=retrodeck-saves
+# Environment=RCLONE_REMOTE=garage
+# Environment=DEBOUNCE_SECS=25
+
+[Install]
+WantedBy=default.target

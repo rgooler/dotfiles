@@ -1,0 +1,26 @@
+# systemd USER timer: cron-like safety net that runs the sync every ~15 min.
+# Install to ~/.config/systemd/user/retrodeck-sync.timer
+#
+# This backstops the folder-watch (retrodeck-sync-watch.service): it re-syncs
+# on a fixed cadence regardless of local activity, and — crucially — picks up
+# saves that changed on the OTHER device while this one was suspended/off (the
+# watcher only sees LOCAL filesystem events, so the timer is what pulls remote
+# changes down when you sit down at an idle machine).
+[Unit]
+Description=RetroDECK save-sync safety-net timer (every ~15m)
+
+[Timer]
+# First run 3 min after login/boot, then every 15 min. The randomized delay
+# keeps the Deck and desktop from hammering garage in lockstep.
+OnBootSec=3min
+OnUnitActiveSec=15min
+RandomizedDelaySec=90
+# Catch up on a missed interval after the machine was suspended/off (a Deck is
+# suspended most of the time). Runs the safety-net once on resume.
+Persistent=true
+# Pass --timer so the script skips its debounce settle (timer runs are already
+# spaced out and don't need to coalesce a write burst).
+Unit=retrodeck-sync-timer.service
+
+[Install]
+WantedBy=timers.target
