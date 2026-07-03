@@ -43,37 +43,6 @@ else
     fail "Some dnf packages failed to install."
 fi
 
-{{ if .gui }}
-FLATPAK_PKGS="{{ range .packages.baseline.gui.flatpak }}{{ . }} {{ end }}{{ range $p := .profiles }}{{ range (index $.packages.profiles $p).flatpak }}{{ . }} {{ end }}{{ end }}"
-if [ -n "${FLATPAK_PKGS// /}" ]; then
-    if ! exist flatpak; then sudo dnf install -y flatpak; fi
-    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    info "Installing flatpak apps: $FLATPAK_PKGS"
-    # Install per-app so one failure can't abort the batch, and skip anything
-    # already installed from any remote. Entries may be "remote:appid" to pin a
-    # remote (e.g. fedora:io.mpv.Mpv — the flathub build had issues); a bare id
-    # defaults to flathub.
-    fp_fail=0
-    for spec in $FLATPAK_PKGS; do
-        remote=flathub; app=$spec
-        case "$spec" in *:*) remote=${spec%%:*}; app=${spec#*:};; esac
-        if flatpak info "$app" >/dev/null 2>&1; then
-            info "Skipping $app (already installed)"
-            continue
-        fi
-        if ! flatpak install -y "$remote" "$app"; then
-            fail "flatpak: failed to install $app from $remote"
-            fp_fail=1
-        fi
-    done
-    if [ "$fp_fail" -eq 0 ]; then
-        success "flatpak apps installed."
-    else
-        fail "Some flatpak apps failed to install."
-    fi
-fi
-{{ end }}
-
 {{ else if eq .pkgmgr "apt" }}
 ##############################################################################
 # Debian/Ubuntu/Kali (UNTESTED)
@@ -87,36 +56,52 @@ if sudo apt-get install -y $APT_PKGS; then
 else
     fail "Some apt packages failed to install."
 fi
+{{ end }}
 
-{{ if .gui }}
+##############################################################################
+# flatpak apps (all Linux GUI machines)
+##############################################################################
+# Runs independently of the system package manager. SteamOS/immutable Decks have
+# no usable pkgmgr (.pkgmgr == "") yet do ship flatpak, so this can't live inside
+# the dnf/apt arms above. Scope follows machine class: desktops (dnf/apt) install
+# system-wide as before; a Deck (empty pkgmgr, read-only root, no sudo) installs
+# per-user.
+{{ if and (eq .chezmoi.os "linux") .gui }}
+FLATPAK_SCOPE="{{ if eq .pkgmgr "" }}--user{{ else }}--system{{ end }}"
 FLATPAK_PKGS="{{ range .packages.baseline.gui.flatpak }}{{ . }} {{ end }}{{ range $p := .profiles }}{{ range (index $.packages.profiles $p).flatpak }}{{ . }} {{ end }}{{ end }}"
 if [ -n "${FLATPAK_PKGS// /}" ]; then
-    if ! exist flatpak; then sudo apt-get install -y flatpak; fi
-    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    info "Installing flatpak apps: $FLATPAK_PKGS"
-    # Install per-app so one failure can't abort the batch, and skip anything
-    # already installed from any remote. Entries may be "remote:appid" to pin a
-    # remote; a bare id defaults to flathub.
-    fp_fail=0
-    for spec in $FLATPAK_PKGS; do
-        remote=flathub; app=$spec
-        case "$spec" in *:*) remote=${spec%%:*}; app=${spec#*:};; esac
-        if flatpak info "$app" >/dev/null 2>&1; then
-            info "Skipping $app (already installed)"
-            continue
+    if ! exist flatpak; then
+{{ if eq .pkgmgr "dnf" }}        sudo dnf install -y flatpak
+{{ else if eq .pkgmgr "apt" }}        sudo apt-get install -y flatpak
+{{ else }}        fail "flatpak not found and no usable package manager to install it; skipping flatpak apps."
+{{ end }}    fi
+    if exist flatpak; then
+        flatpak remote-add $FLATPAK_SCOPE --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+        info "Installing flatpak apps ($FLATPAK_SCOPE): $FLATPAK_PKGS"
+        # Install per-app so one failure can't abort the batch, and skip anything
+        # already installed from any remote/scope. Entries may be "remote:appid"
+        # to pin a remote (e.g. fedora:io.mpv.Mpv — the flathub build had issues);
+        # a bare id defaults to flathub.
+        fp_fail=0
+        for spec in $FLATPAK_PKGS; do
+            remote=flathub; app=$spec
+            case "$spec" in *:*) remote=${spec%%:*}; app=${spec#*:};; esac
+            if flatpak info "$app" >/dev/null 2>&1; then
+                info "Skipping $app (already installed)"
+                continue
+            fi
+            if ! flatpak install $FLATPAK_SCOPE -y "$remote" "$app"; then
+                fail "flatpak: failed to install $app from $remote"
+                fp_fail=1
+            fi
+        done
+        if [ "$fp_fail" -eq 0 ]; then
+            success "flatpak apps installed."
+        else
+            fail "Some flatpak apps failed to install."
         fi
-        if ! flatpak install -y "$remote" "$app"; then
-            fail "flatpak: failed to install $app from $remote"
-            fp_fail=1
-        fi
-    done
-    if [ "$fp_fail" -eq 0 ]; then
-        success "flatpak apps installed."
-    else
-        fail "Some flatpak apps failed to install."
     fi
 fi
-{{ end }}
 {{ end }}
 
 ##############################################################################
